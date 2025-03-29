@@ -4,17 +4,10 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { getAllProducts, deleteProduct } from "@/lib/products"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-
-interface Product {
-  id: string
-  name: string
-  price: number
-  stock: number
-  code: string
-}
+import type { Product } from "@/types/product"
+import { MostPurchasedChart } from "./most-purchased-chart"
 
 export default function AdminProductsPage() {
   const router = useRouter()
@@ -23,22 +16,25 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadProducts() {
+      setIsLoading(true)
+      setError(null)
       try {
-        setIsLoading(true)
-        const result = await getAllProducts()
+        const response = await fetch("/api/products")
 
-        if (result.success) {
-          setProducts(result.data || [])
-        } else {
-          setError(result.error || "Error al cargar los productos")
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
         }
+
+        const data: Product[] = await response.json()
+        setProducts(data)
       } catch (err) {
-        console.error("Error al cargar productos:", err)
-        setError("Error inesperado al cargar los productos")
+        console.error("Error loading products from API:", err)
+        setError(err instanceof Error ? err.message : "An unexpected error occurred")
       } finally {
         setIsLoading(false)
       }
@@ -54,26 +50,34 @@ export default function AdminProductsPage() {
       return
     }
 
-    try {
-      setIsDeleting(true)
-      const result = await deleteProduct(id)
+    setIsDeleting(id)
+    setError(null)
 
-      if (result.success) {
-        setProducts(products.filter((product) => product.id !== id))
-      } else {
-        setError(result.error || "Error al eliminar el producto")
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || response.statusText || `HTTP error! status: ${response.status}`)
       }
+
+      setProducts((currentProducts) =>
+        currentProducts.filter((product) => product.id !== id)
+      )
+
     } catch (err) {
-      console.error("Error al eliminar el producto:", err)
-      setError("Error inesperado al eliminar el producto")
+      console.error("Error deleting product via API:", err)
+      setError(err instanceof Error ? err.message : "An unexpected error occurred during deletion")
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(null)
     }
   }
 
   return (
     <RouteGuard requireAuth requireAdmin>
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto p-4 space-y-6">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Administrar Productos</h1>
           <Link href="/admin/products/new" className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
@@ -81,12 +85,14 @@ export default function AdminProductsPage() {
           </Link>
         </div>
 
+        <MostPurchasedChart />
+
         {isLoading ? (
           <div className="flex justify-center">
             <LoadingSpinner />
           </div>
         ) : error ? (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>
+          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">Error: {error}</div>
         ) : products.length === 0 ? (
           <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-700">
             No hay productos disponibles en este momento.
@@ -106,7 +112,7 @@ export default function AdminProductsPage() {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
-                    Código
+                    SKU
                   </th>
                   <th
                     scope="col"
@@ -134,7 +140,7 @@ export default function AdminProductsPage() {
                     <td className="whitespace-nowrap px-6 py-4">
                       <span className="font-medium text-gray-900">{product.name}</span>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{product.code}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{product.sku || "-"}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">${product.price.toFixed(2)}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{product.stock}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm">
@@ -144,10 +150,10 @@ export default function AdminProductsPage() {
                         </Link>
                         <button
                           onClick={() => handleDeleteProduct(product.id)}
-                          disabled={isDeleting}
+                          disabled={isDeleting === product.id}
                           className="text-red-600 hover:text-red-900 disabled:opacity-50"
                         >
-                          Eliminar
+                          {isDeleting === product.id ? "Eliminando..." : "Eliminar"}
                         </button>
                       </div>
                     </td>

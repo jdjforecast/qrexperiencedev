@@ -7,19 +7,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { getUserCart, removeFromCart, updateCartItem } from "@/lib/cart"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-
-interface CartItem {
-  id: string
-  quantity: number
-  product_id: string
-  products: {
-    id: string
-    name: string
-    price: number
-    image_url: string | null
-    stock: number
-  }
-}
+import type { CartItem, ProductData } from "@/types/cart"
 
 export default function CartPage() {
   const router = useRouter()
@@ -39,7 +27,11 @@ export default function CartPage() {
         const result = await getUserCart(user.id)
 
         if (result.success) {
-          setCartItems(result.data || [])
+            const formattedData = (result.data || []).map(item => ({
+                ...item,
+                products: Array.isArray(item.products) ? item.products : (item.products ? [item.products] : null)
+            })) as CartItem[];
+          setCartItems(formattedData)
         } else {
           setError(result.error || "Error al cargar el carrito")
         }
@@ -96,7 +88,9 @@ export default function CartPage() {
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
-      return total + item.products.price * item.quantity
+      const product = item.products?.[0];
+      if (!product) return total;
+      return total + product.price * item.quantity
     }, 0)
   }
 
@@ -126,14 +120,17 @@ export default function CartPage() {
             <div className="lg:col-span-2">
               <div className="overflow-hidden rounded-lg bg-white shadow-md">
                 <ul className="divide-y divide-gray-200">
-                  {cartItems.map((item) => (
+                  {cartItems.map((item) => {
+                    const product = item.products?.[0];
+
+                    return (
                     <li key={item.id} className="p-4">
                       <div className="flex items-center space-x-4">
                         <div className="relative h-16 w-16 flex-shrink-0">
-                          {item.products.image_url ? (
+                          {product?.image_url ? (
                             <Image
-                              src={item.products.image_url || "/placeholder.svg"}
-                              alt={item.products.name}
+                              src={product.image_url || "/placeholder.svg"}
+                              alt={product.name || "Producto"}
                               fill
                               className="rounded-md object-cover"
                             />
@@ -145,8 +142,8 @@ export default function CartPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-900">{item.products.name}</p>
-                          <p className="text-sm text-gray-500">${item.products.price.toFixed(2)}</p>
+                          <p className="truncate text-sm font-medium text-gray-900">{product?.name || "Producto Desconocido"}</p>
+                          <p className="text-sm text-gray-500">${(product?.price || 0).toFixed(2)}</p>
                         </div>
 
                         <div className="flex items-center space-x-4">
@@ -161,7 +158,7 @@ export default function CartPage() {
                             <span className="px-2 py-1">{item.quantity}</span>
                             <button
                               onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                              disabled={isUpdating}
+                              disabled={isUpdating || !product || item.quantity >= product.stock}
                               className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                             >
                               +
@@ -178,7 +175,8 @@ export default function CartPage() {
                         </div>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
             </div>

@@ -4,103 +4,102 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Search, Eye, CheckCircle, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getCurrentUser, isAdmin } from "@/lib/auth"
-import { getAllOrders } from "@/lib/admin"
+import { getCurrentUser, isUserAdmin } from "@/lib/auth"
+import { updateOrderStatus } from "@/lib/orders"
 import { useRouter } from "next/navigation"
-import { getBrowserClient } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { AdminOrder } from "@/types/order"
 
 export default function AdminOrdersPage() {
   const [userId, setUserId] = useState<string | null>(null)
-  const [isUserAdmin, setIsUserAdmin] = useState(false)
+  const [isUserAdminState, setIsUserAdminState] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState<AdminOrder[]>([])
   const [searchTerm, setSearchTerm] = useState("")
 
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      const user = await getCurrentUser()
-      if (user) {
-        setUserId(user.id)
-
-        // Verificar si el usuario es administrador
-        const admin = await isAdmin(user.id)
-        setIsUserAdmin(admin)
-
-        if (admin) {
-          // Cargar la lista de pedidos
-          const { data, error } = await getAllOrders()
-
-          if (error) {
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: "No se pudieron cargar los pedidos",
-            })
-          } else {
-            setOrders(data || [])
-          }
-
-          setIsLoading(false)
-        } else {
-          // Redireccionar a inicio si no es administrador
-          router.push("/")
+    async function checkAdminAndLoadOrders() {
+      setIsLoading(true)
+      let isAdminCheck = false;
+      try {
+        const user = await getCurrentUser()
+        if (!user) {
+          router.push("/login")
+          return
         }
-      } else {
-        // Redireccionar a login si no ha iniciado sesión
-        router.push("/login")
+        setUserId(user.id)
+        isAdminCheck = await isUserAdmin(user.id)
+        setIsUserAdminState(isAdminCheck)
+        if (!isAdminCheck) {
+          router.push("/")
+          return
+        }
+        
+        const response = await fetch("/api/orders")
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        const data: AdminOrder[] = await response.json()
+        setOrders(data)
+
+      } catch (err) {
+        console.error("Error in admin orders page setup:", err)
+        const message = err instanceof Error ? err.message : "An unexpected error occurred"
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: isAdminCheck ? message : "Authentication failed",
+        })
+        setOrders([])
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    checkAdmin()
+    checkAdminAndLoadOrders()
   }, [router, toast])
 
   const filteredOrders = orders.filter((order) => {
     if (!searchTerm) return true
 
     const searchLower = searchTerm.toLowerCase()
-    const userId = order.user_id?.toLowerCase() || ""
+    const orderId = order.order_id?.toLowerCase() || ""
     const userName = order.user?.full_name?.toLowerCase() || ""
     const userEmail = order.user?.email?.toLowerCase() || ""
 
     return (
-      userId.includes(searchLower) ||
+      orderId.includes(searchLower) ||
       userName.includes(searchLower) ||
-      userEmail.includes(searchLower) ||
-      order.id?.toLowerCase().includes(searchLower)
+      userEmail.includes(searchLower)
     )
   })
 
   const markAsCompleted = async (orderId: string) => {
-    try {
-      setIsLoading(true)
-      const supabase = getBrowserClient()
+    setIsLoading(true)
+    const result = await updateOrderStatus(orderId, "completed")
+    setIsLoading(false)
 
-      const { error } = await supabase.from("orders").update({ status: "completed" }).eq("id", orderId)
-
-      if (error) {
-        throw error
-      }
-
-      // Actualizar la lista de pedidos localmente
-      setOrders(orders.map((order) => (order.id === orderId ? { ...order, status: "completed" } : order)))
-
+    if (result.success && result.data) {
+      setOrders(currentOrders => 
+        currentOrders.map(order => 
+          order.order_id === orderId ? { ...order, ...result.data } : order
+        )
+      )
       toast({
         title: "Pedido actualizado",
         description: "El pedido ha sido marcado como completado",
       })
-    } catch (error: any) {
-      console.error("Error updating order:", error)
+    } else {
+      console.error("Error updating order status:", result.error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo actualizar el pedido",
+        description: result.error || "No se pudo actualizar el pedido",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -141,7 +140,7 @@ export default function AdminOrdersPage() {
                   <th className="text-left py-3 px-4">ID Pedido</th>
                   <th className="text-left py-3 px-4">Usuario</th>
                   <th className="text-left py-3 px-4">Fecha</th>
-                  <th className="text-left py-3 px-4">Monedas</th>
+                  <th className="text-left py-3 px-4">Total</th>
                   <th className="text-left py-3 px-4">Estado</th>
                   <th className="text-right py-3 px-4">Acciones</th>
                 </tr>
@@ -150,18 +149,19 @@ export default function AdminOrdersPage() {
                 {filteredOrders.length > 0 ? (
                   filteredOrders.map((order) => (
                     <motion.tr
-                      key={order.id}
+                      key={order.order_id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.3 }}
                       className="border-b border-white/10 hover:bg-white/5"
                     >
-                      <td className="py-3 px-4">{order.id.substring(0, 8)}...</td>
+                      <td className="py-3 px-4">{order.order_id.substring(0, 8)}...</td>
                       <td className="py-3 px-4">
-                        {order.user?.email || order.user_id?.substring(0, 8) || "Desconocido"}
+                        {order.user?.email || "Desconocido"}
+                        {order.user?.full_name && ` (${order.user.full_name})`}
                       </td>
                       <td className="py-3 px-4">{new Date(order.created_at).toLocaleDateString()}</td>
-                      <td className="py-3 px-4">{order.total_coins || 0}</td>
+                      <td className="py-3 px-4">${order.total_amount?.toFixed(2) ?? 'N/A'}</td>
                       <td className="py-3 px-4">
                         <span
                           className={`inline-block px-2 py-1 rounded-full text-xs ${
@@ -170,26 +170,16 @@ export default function AdminOrdersPage() {
                               : "bg-yellow-500/20 text-yellow-300"
                           }`}
                         >
-                          {order.status === "completed" ? "Completado" : "Pendiente"}
+                          {order.status}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-white/10 border-white/20 hover:bg-white/20 mr-2"
-                          onClick={() => router.push(`/admin/orders/${order.id}`)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver
-                        </Button>
-
                         {order.status !== "completed" && (
                           <Button
                             variant="outline"
                             size="sm"
                             className="bg-green-900/30 border-green-500/30 hover:bg-green-900/50 hover:border-green-500/50"
-                            onClick={() => markAsCompleted(order.id)}
+                            onClick={() => markAsCompleted(order.order_id)}
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
                             Completar

@@ -3,12 +3,9 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Scan } from "lucide-react"
-import dynamic from "next/dynamic"
-
-// Importar la librería de forma dinámica para evitar problemas de SSR
-const Html5QrcodeModule = dynamic(() => import("html5-qrcode").then((mod) => ({ Html5Qrcode: mod.Html5Qrcode })), {
-  ssr: false,
-})
+// Import normally, but only use within useEffect
+import { Html5Qrcode } from "html5-qrcode";
+import { toast } from "react-hot-toast"
 
 export default function QrScannerAlternative() {
   const [showScanner, setShowScanner] = useState(false)
@@ -16,135 +13,158 @@ export default function QrScannerAlternative() {
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const scannerRef = useRef<any>(null)
+  // Use the specific type now, but initialize as null
+  const scannerRef = useRef<Html5Qrcode | null>(null) 
   const router = useRouter()
 
+  // Effect to get cameras when scanner is shown
   useEffect(() => {
-    // Limpiar el escáner cuando el componente se desmonta
-    return () => {
-      if (scannerRef.current && scannerRef.current.stop) {
-        try {
-          scannerRef.current.stop()
-        } catch (err) {
-          console.error("Error al detener el escáner:", err)
-        }
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    const getCameras = async () => {
-      if (showScanner && Html5QrcodeModule && Html5QrcodeModule.Html5Qrcode) {
-        try {
-          const devices = await Html5QrcodeModule.Html5Qrcode.getCameras()
+    // Only run on client-side when showScanner becomes true
+    if (showScanner && typeof window !== "undefined") {
+      Html5Qrcode.getCameras()
+        .then(devices => {
           if (devices && devices.length) {
             setCameras(devices)
-            setSelectedCamera(devices[0].id)
+            // Select the first camera by default only if none is selected
+            if (!selectedCamera) {
+                 setSelectedCamera(devices[0].id)
+            }
           } else {
-            setError(
-              "No se detectaron cámaras. Por favor, asegúrate de que tu dispositivo tiene una cámara y que has concedido los permisos necesarios.",
-            )
+            setError("No se detectaron cámaras...");
           }
-        } catch (err) {
+        })
+        .catch(err => {
           console.error("Error al obtener cámaras:", err)
-          setError("Error al acceder a las cámaras. Por favor, asegúrate de que has concedido los permisos necesarios.")
-        }
-      }
+          setError("Error al acceder a las cámaras...");
+        });
     }
+    // Run when showScanner changes
+  }, [showScanner]); 
 
-    if (showScanner) {
-      getCameras()
-    }
-  }, [showScanner, Html5QrcodeModule])
+  // Effect to start/stop scanner based on state
+  useEffect(() => {
+    // Ensure this only runs client-side
+    if (typeof window === "undefined") return;
 
-  const startScanner = async () => {
-    if (!selectedCamera || !Html5QrcodeModule || !Html5QrcodeModule.Html5Qrcode) return
-
-    try {
-      setScanning(true)
-      setError(null)
-
-      const html5QrCode = new Html5QrcodeModule.Html5Qrcode("qr-reader-alternative")
-      scannerRef.current = html5QrCode
-
-      await html5QrCode.start(
+    if (scanning && selectedCamera && !scannerRef.current) {
+      // Start scanning
+      const html5QrCode = new Html5Qrcode("qr-reader-alternative");
+      scannerRef.current = html5QrCode;
+      html5QrCode.start(
         selectedCamera,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-        },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
         onScanSuccess,
-        onScanFailure,
+        onScanFailure
       )
-    } catch (err) {
-      console.error("Error al iniciar el escáner:", err)
-      setError("Error al iniciar el escáner. Por favor, intenta nuevamente.")
-      setScanning(false)
+      .catch(err => {
+        console.error("Error al iniciar el escáner:", err);
+        setError("Error al iniciar el escáner. Intente nuevamente.");
+        setScanning(false); // Reset scanning state on error
+        scannerRef.current = null; // Clear ref on error
+      });
+    } else if (!scanning && scannerRef.current) {
+      // Stop scanning
+      scannerRef.current.stop()
+        .then(() => {
+          console.log("Scanner stopped.");
+          scannerRef.current = null;
+        })
+        .catch(err => {
+          console.error("Error al detener el escáner:", err);
+          // Don't necessarily set error state here, stopping might fail sometimes
+          scannerRef.current = null; // Still clear ref
+        });
     }
-  }
 
-  const stopScanner = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop()
-        setScanning(false)
-      } catch (err) {
-        console.error("Error al detener el escáner:", err)
+    // Cleanup function to stop scanner when component unmounts or scanning becomes false
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(err => console.error("Cleanup: Error stopping scanner", err));
+        scannerRef.current = null;
       }
-    }
+    };
+  }, [scanning, selectedCamera]); // Dependencies that trigger start/stop
+
+  // --- Button Handlers --- 
+  const handleStartScanner = () => {
+      if (!selectedCamera) {
+          setError("Por favor seleccione una cámara.");
+          return;
+      }
+      setError(null);
+      setScanning(true);
   }
 
+  const handleStopScanner = () => {
+      setScanning(false);
+  }
+  
+  // --- Scan Handlers (Already Refactored) --- 
   const onScanSuccess = (decodedText: string) => {
-    // Detener el escáner
-    stopScanner()
-    setShowScanner(false)
-
+    // Stop the scanner and close the modal
+    handleStopScanner(); // Use the handler to set scanning state false
+    setShowScanner(false);
+    document.body.style.overflow = "auto"; 
+    console.log("Alternative QR scanned (expecting URL):", decodedText);
     try {
-      // Verificar si la URL es válida y pertenece a nuestro dominio
-      const url = new URL(decodedText)
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || window.location.origin
+        const url = new URL(decodedText);
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || window.location.origin
+        const appOrigin = new URL(appUrl).origin
 
-      if (url.origin === new URL(appUrl).origin) {
-        // Si es una URL de nuestra aplicación, navegar a ella
-        router.push(url.pathname + url.search)
-      } else {
-        // Si es una URL externa, verificar si es un código de producto válido
-        if (decodedText.includes("/product/")) {
-          const productId = decodedText.split("/product/")[1].split("?")[0]
-          router.push(`/product/${productId}`)
+        // Check if it's a URL from our app
+        if (url.origin === appOrigin) {
+          // Check if it looks like a product page URL
+          if (url.pathname.startsWith("/product/")) {
+            console.log(`Navigating to internal product page: ${url.pathname}${url.search}`)
+            // Navigate to the product page within the app
+            router.push(url.pathname + url.search)
+          } else {
+            // It's another internal URL, navigate to it
+            console.log(`Navigating to internal page: ${url.pathname}${url.search}`)
+            router.push(url.pathname + url.search)
+          }
         } else {
-          alert("Código QR no válido. Por favor, escanee un código QR de producto válido.")
+          // It's a valid URL but external, open in new tab for safety
+          console.log("Opening external URL:", decodedText)
+          window.open(decodedText, "_blank", "noopener,noreferrer")
+          // Optionally show a toast message about opening an external link
+          toast("Abriendo enlace externo..."); 
         }
-      }
-    } catch (error) {
-      // Si no es una URL válida, verificar si es un ID de producto
-      if (decodedText.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
-        router.push(`/product/${decodedText}`)
-      } else {
-        alert("Código QR no reconocido. Por favor, intente nuevamente.")
-      }
+    } catch (error) { 
+        toast.error("Código QR no contiene una URL válida."); 
     }
   }
 
   const onScanFailure = (errorMessage: string) => {
-    // Solo registrar el error, no mostrar al usuario para evitar spam
-    console.error("Error al escanear:", errorMessage)
+    // Only log errors, don't bother the user unless necessary
+    // console.error("Alternative QR Scan Error:", errorMessage);
+    if (errorMessage.includes("Camera access denied")) {
+        setError("Acceso a la cámara denegado. Por favor, permite el acceso en la configuración de tu navegador.");
+        // Consider stopping scan/closing modal if permission denied?
+    } else if (errorMessage.includes("NotAllowedError")) { 
+        setError("Permiso para usar la cámara denegado.");
+    }
+    // Ignore other common errors like "No QR code found"
   }
 
+  // --- Modal Handlers --- 
   const handleOpenScanner = () => {
     setError(null)
+    // Reset camera list and selection potentially?
+    // setCameras([]);
+    // setSelectedCamera(null);
     setShowScanner(true)
   }
 
   const handleCloseScanner = () => {
-    stopScanner()
+    handleStopScanner(); // Ensure scanner stops
     setShowScanner(false)
   }
 
+  // --- Render --- 
   return (
     <>
-      {/* Botón flotante */}
+      {/* FAB Button */}
       <button
         onClick={handleOpenScanner}
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -153,7 +173,7 @@ export default function QrScannerAlternative() {
         <Scan className="h-6 w-6" />
       </button>
 
-      {/* Overlay del escáner */}
+      {/* Scanner Modal */} 
       {showScanner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
           <div className="relative w-full max-w-lg rounded-lg bg-white p-6">
@@ -195,7 +215,7 @@ export default function QrScannerAlternative() {
               </p>
             )}
 
-            {cameras.length > 0 && (
+            {cameras.length > 0 && !scanning && (
               <div className="mb-4">
                 <label htmlFor="camera-select" className="mb-2 block text-sm font-medium text-gray-700">
                   Seleccionar cámara:
@@ -203,7 +223,11 @@ export default function QrScannerAlternative() {
                 <select
                   id="camera-select"
                   value={selectedCamera || ""}
-                  onChange={(e) => setSelectedCamera(e.target.value)}
+                  onChange={(e) => { 
+                      setSelectedCamera(e.target.value);
+                      // Stop scanner if running when camera changes? Might not be necessary if start is manual
+                      // if (scanning) setScanning(false);
+                  }}
                   className="block w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 >
                   {cameras.map((camera) => (
@@ -217,7 +241,7 @@ export default function QrScannerAlternative() {
 
             {!scanning && selectedCamera && (
               <button
-                onClick={startScanner}
+                onClick={handleStartScanner}
                 className="mb-4 w-full rounded-md bg-blue-600 py-2 text-white hover:bg-blue-700"
               >
                 Iniciar escáner
@@ -226,14 +250,15 @@ export default function QrScannerAlternative() {
 
             {scanning && (
               <button
-                onClick={stopScanner}
+                onClick={handleStopScanner}
                 className="mb-4 w-full rounded-md bg-red-600 py-2 text-white hover:bg-red-700"
               >
                 Detener escáner
               </button>
             )}
 
-            <div id="qr-reader-alternative" className="mx-auto overflow-hidden rounded-lg"></div>
+            {selectedCamera && <div id="qr-reader-alternative" className="mx-auto overflow-hidden rounded-lg mt-4"></div>}
+            {!selectedCamera && cameras.length === 0 && !error && <p>Buscando cámaras...</p>} 
 
             <div className="mt-4 text-center text-sm text-gray-500">
               Recuerde que solo puede agregar 1 unidad por referencia de producto

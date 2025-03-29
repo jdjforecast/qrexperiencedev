@@ -1,8 +1,8 @@
 import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
 
 export const metadata: Metadata = {
   title: "Mi Partner App",
@@ -27,7 +27,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-
-import './globals.css'

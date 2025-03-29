@@ -6,20 +6,21 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Save, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getCurrentUser, isAdmin } from "@/lib/auth"
-import { getProductById, updateProduct, uploadProductImage } from "@/lib/storage/products"
+import { getCurrentUser, isUserAdmin } from "@/lib/auth"
+import { uploadProductImage } from "@/lib/storage/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import Image from "next/image"
+import type { Product } from "@/types/product"
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const [userId, setUserId] = useState<string | null>(null)
-  const [isUserAdmin, setIsUserAdmin] = useState(false)
+  const [isUserAdminState, setIsUserAdminState] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [product, setProduct] = useState<any>(null)
+  const [product, setProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -44,8 +45,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         setUserId(user.id)
 
         // Check if user is admin
-        const admin = await isAdmin(user.id)
-        setIsUserAdmin(admin)
+        const admin = await isUserAdmin(user.id)
+        setIsUserAdminState(admin)
 
         if (admin) {
           // Load product data
@@ -68,15 +69,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     setError(null)
 
     try {
-      const { data, error } = await getProductById(productId)
+      const response = await fetch(`/api/products/${productId}`)
 
-      if (error) {
-        throw error
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
 
-      if (!data) {
-        throw new Error("Producto no encontrado")
-      }
+      const data: Product = await response.json()
 
       setProduct(data)
       setFormData({
@@ -90,12 +90,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       })
       setImagePreview(data.image_url || null)
     } catch (error) {
-      console.error("Error loading product:", error)
-      setError(error instanceof Error ? error.message : "Error al cargar el producto")
-
+      console.error("Error loading product via API:", error)
+      const message = error instanceof Error ? error.message : "Error al cargar el producto"
+      setError(message)
       toast({
         title: "Error",
-        description: "No se pudo cargar la información del producto",
+        description: message,
         variant: "destructive",
       })
     } finally {
@@ -146,48 +146,68 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     setIsSaving(true)
     setError(null)
 
     try {
-      // Primero actualizar los datos del producto
-      const { error: updateError } = await updateProduct(productId, formData)
+      // 1. Use fetch PUT instead of updateProduct
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData), // Send current form data
+      });
 
-      if (updateError) {
-        throw updateError
+      // 2. Handle response
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      // Si hay una nueva imagen, subirla
-      if (imageFile) {
-        const { error: uploadError } = await uploadProductImage(imageFile, productId)
-
+      // Product data updated successfully via API.
+      // Now, upload the new image if one was selected.
+      let uploadSuccessful = true; // Assume success if no image file
+      if (imageFile) { // 3. Image upload logic remains
+        const { error: uploadError } = await uploadProductImage(imageFile, productId);
         if (uploadError) {
-          throw uploadError
+          uploadSuccessful = false;
+          console.error("Error uploading new image:", uploadError);
+          toast({
+            title: "Advertencia",
+            description: "Datos del producto actualizados, pero falló la subida de la nueva imagen.",
+            variant: "default", // Or use a specific warning variant
+          });
+          // Decide whether to proceed with redirect even if image fails
+          // Proceeding for now.
         }
       }
 
-      toast({
-        title: "Producto actualizado",
-        description: "El producto se ha actualizado correctamente",
-        variant: "default",
-      })
+      // Show full success toast only if data update succeeded AND
+      // (there was no new image OR the new image upload also succeeded)
+      if (uploadSuccessful) {
+        toast({
+          title: "Producto actualizado",
+          description: "El producto se ha actualizado correctamente.",
+          variant: "default",
+        });
+      }
 
-      // Redirigir a la lista de productos
-      router.push("/admin/products")
-    } catch (error) {
-      console.error("Error updating product:", error)
-      setError(error instanceof Error ? error.message : "Error al actualizar el producto")
+      router.push("/admin/products"); // Redirect after operations
 
+    } catch (error) { // Handle errors (from PUT or image upload)
+      console.error("Error updating product process:", error);
+      const message = error instanceof Error ? error.message : "Error al actualizar el producto";
+      setError(message);
       toast({
         title: "Error",
-        description: "No se pudo actualizar el producto",
+        description: message,
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
     <div className="p-6">

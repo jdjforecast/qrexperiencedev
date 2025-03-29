@@ -1,4 +1,7 @@
 import { createServerClient } from "./supabase"
+import { createClientClient } from "@/lib/supabase/client"
+import { AdminOrder } from "@/types/order"
+import { AdminOrdersArraySchema } from "@/types/schemas"
 
 // Get all users
 export async function getAllUsers() {
@@ -8,15 +11,59 @@ export async function getAllUsers() {
   return { data: data || [], error }
 }
 
-// Get all orders
-export async function getAllOrders() {
-  const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*, user:user_id(email, full_name)")
-    .order("created_at", { ascending: false })
+// Define return type for this function
+type AdminOrdersFetchResult = 
+  | { success: true; data: AdminOrder[] }
+  | { success: false; error: string };
 
-  return { data: data || [], error }
+// Refactored getAllOrders for client-side usage with detailed select and validation
+export async function getAllOrders(): Promise<AdminOrdersFetchResult> {
+  const supabase = createClientClient(); // Use client-side instance
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      // Select fields matching AdminOrderSchema
+      .select(`
+        order_id,
+        created_at,
+        status,
+        total_amount,
+        user:user_id(email, full_name), 
+        order_items (
+          quantity,
+          price, 
+          products ( 
+            id:product_id, 
+            name,
+            price, 
+            image_url,
+            stock
+          )
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching all orders:", error);
+      return { success: false, error: error.message }; 
+    }
+
+    // Validate data with Zod 
+    const validationResult = AdminOrdersArraySchema.safeParse(data);
+    if (!validationResult.success) {
+      console.error("Zod validation failed for getAllOrders:", validationResult.error.errors);
+      // Provide a user-friendly error message
+      return { success: false, error: "Error: Datos de pedidos inválidos recibidos del servidor." }; 
+    }
+
+    // Return validated data
+    return { success: true, data: validationResult.data };
+
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Error inesperado al obtener todos los pedidos";
+    console.error("Unexpected error fetching all orders:", err);
+    return { success: false, error: errorMessage };
+  }
 }
 
 // Get dashboard stats

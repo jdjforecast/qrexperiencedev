@@ -8,14 +8,14 @@ import Image from "next/image"
 import QrScannerFab from "@/components/qr-scanner/qr-scanner-fab"
 
 export default function HomePage() {
-  const { user, loading } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!isLoading && user) {
       router.push("/dashboard")
     }
-  }, [user, loading, router])
+  }, [user, isLoading, router])
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0055a5] text-white">
@@ -133,12 +133,6 @@ export default function HomePage() {
           </div>
         </section>
       </main>
-
-      <footer className="bg-[#004489] py-6 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <p>&copy; {new Date().getFullYear()} QRexperience. Todos los derechos reservados.</p>
-        </div>
-      </footer>
 
       {/* Botón flotante para escanear QR */}
       <QrScannerFab />

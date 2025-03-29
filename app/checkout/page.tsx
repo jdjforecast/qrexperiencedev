@@ -9,17 +9,7 @@ import { getUserCart } from "@/lib/cart"
 import { createOrder } from "@/lib/orders"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-
-interface CartItem {
-  id: string
-  quantity: number
-  product_id: string
-  products: {
-    id: string
-    name: string
-    price: number
-  }
-}
+import type { CartItem } from "@/types/cart"
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -68,7 +58,9 @@ export default function CheckoutPage() {
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
-      return total + item.products.price * item.quantity
+      const product = item.products?.[0];
+      if (!product) return total;
+      return total + product.price * item.quantity
     }, 0)
   }
 
@@ -82,7 +74,7 @@ export default function CheckoutPage() {
       setError(null)
 
       const total = calculateTotal()
-      const result = await createOrder(user.id, cartItems, total)
+      const result = await createOrder(user.id, cartItems, total, { address, city, postalCode, phone })
 
       if (result.success) {
         router.push(`/orders/${result.data.id}`)
@@ -215,17 +207,20 @@ export default function CheckoutPage() {
                 <h2 className="mb-4 text-lg font-semibold">Resumen del Pedido</h2>
 
                 <ul className="mb-4 divide-y divide-gray-200">
-                  {cartItems.map((item) => (
+                  {cartItems.map((item) => {
+                    const product = item.products?.[0];
+                    return (
                     <li key={item.id} className="py-2">
                       <div className="flex justify-between">
                         <div>
-                          <span className="font-medium">{item.products.name}</span>
+                          <span className="font-medium">{product?.name || "Producto Desconocido"}</span>
                           <span className="ml-2 text-gray-600">x{item.quantity}</span>
                         </div>
-                        <span>${(item.products.price * item.quantity).toFixed(2)}</span>
+                        <span>${( (product?.price || 0) * item.quantity ).toFixed(2)}</span>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
 
                 <div className="space-y-2">

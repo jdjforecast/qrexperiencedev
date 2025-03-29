@@ -4,32 +4,70 @@
  * Este archivo contiene todas las funciones relacionadas con la autenticación,
  * autorización y gestión de perfiles de usuario.
  */
+import { cookies } from 'next/headers'; // Import cookies
+import { createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr'; // Import from ssr
+import { createBrowserClient } from "@/lib/supabase-client"
+import type { User } from '@supabase/supabase-js'; // Import User type
 
-import { createServerClient, createBrowserClient } from "@/lib/supabase-client"
+// Helper to create server client (avoids repeating cookie logic)
+export async function createServerClient(options?: { admin?: boolean }) {
+  const cookieStore = await cookies(); // Await the cookies
+  return createSupabaseServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    options?.admin ? process.env.SUPABASE_SERVICE_ROLE_KEY! : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: '', ...options });
+        },
+      },
+    }
+  );
+}
+
+// Define a type for the profile data
+interface ProfileData {
+    id: string;
+    role: 'customer' | 'admin' | string; // Allow other roles potentially
+    full_name?: string;
+    company_name?: string;
+    // Add other potential profile fields here
+    [key: string]: any; // Allow for other dynamic properties if needed, cautiously
+}
 
 /**
  * Obtiene el usuario actual desde el servidor
  * @returns El usuario actual o null si no hay sesión
  */
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<User | null> { // Added return type
   try {
-    const supabase = createServerClient()
-    const { data, error } = await supabase.auth.getSession()
+    const supabase = await createServerClient(); // Added await
+    const { data, error } = await supabase.auth.getSession();
 
     if (error) {
-      console.error("Error al obtener la sesión:", error.message)
-      return null
+      console.error("Error al obtener la sesión:", error.message);
+      return null;
     }
 
     if (!data.session) {
-      // No hay sesión activa, pero no es un error
-      return null
+      return null;
     }
 
-    return data.session.user
+    return data.session.user;
   } catch (error) {
-    console.error("Error al obtener el usuario actual:", error)
-    return null
+    // Handle unknown error type
+    if (error instanceof Error) {
+      console.error("Error al obtener el usuario actual:", error.message);
+    } else {
+      console.error("Error desconocido al obtener el usuario actual:", error);
+    }
+    return null;
   }
 }
 
@@ -38,72 +76,74 @@ export async function getCurrentUser() {
  * @param userId ID del usuario
  * @returns Perfil del usuario o null si no existe
  */
-export async function getUserProfile(userId) {
+export async function getUserProfile(userId: string): Promise<ProfileData | null> { // Added return type
+  let profileToReturn: ProfileData | null = null; // Initialize return value
   try {
     if (!userId) {
-      console.warn("getUserProfile: No se proporcionó userId")
-      return null
+      console.warn("getUserProfile: No se proporcionó userId");
+      return null;
     }
 
-    // Usar el cliente del servidor con la opción de service_role para evitar restricciones RLS
-    const supabase = createServerClient({ admin: true })
+    // Use the server client with admin privileges
+    const supabase = await createServerClient({ admin: true }); // Added await
 
-    // Verificar si el perfil existe
-    const { data: profileExists, error: checkError } = await supabase.from("profiles").select("id").eq("id", userId)
+    // Check if the profile exists first
+    const { data: existingProfile, error: checkError } = await supabase
+      .from("profiles")
+      .select("id, role, full_name, company_name") // Select specific known columns
+      .eq("id", userId)
+      .maybeSingle(); // Use maybeSingle to avoid error if not found
 
     if (checkError) {
-      console.error("Error al verificar si existe el perfil:", checkError.message)
-      return null
+        console.error("Error al verificar/obtener el perfil existente:", checkError.message);
+        // Consider if returning a default profile is appropriate or if null/error is better
+        // Returning null for now to indicate failure
+        return null;
     }
 
-    // Si el perfil no existe, crearlo
-    if (!profileExists || profileExists.length === 0) {
-      console.log(`Perfil no encontrado para el usuario ${userId}, creando uno nuevo...`)
-
-      const { error: insertError } = await supabase.from("profiles").insert({
-        id: userId,
-        role: "customer", // Rol predeterminado
-      })
+    if (existingProfile) {
+        console.log(`Perfil encontrado para el usuario ${userId}`);
+        profileToReturn = existingProfile as ProfileData; // Cast to known type
+    } else {
+      // Profile doesn't exist, create a new one
+      console.log(`Perfil no encontrado para el usuario ${userId}, creando uno nuevo...`);
+      const defaultRole = 'customer';
+      const { data: newProfile, error: insertError } = await supabase
+        .from("profiles")
+        .insert({
+          id: userId,
+          role: defaultRole,
+          // Initialize other fields if necessary/possible
+        })
+        .select("id, role, full_name, company_name") // Select known columns after insert
+        .single(); // Should exist now
 
       if (insertError) {
-        console.error("Error al crear el perfil del usuario:", insertError.message)
-        // Devolver un perfil básico en lugar de null
-        return {
-          id: userId,
-          role: "customer",
-        }
+        console.error("Error al crear el perfil del usuario:", insertError.message);
+        // Decide handling: return null, default, or throw? Returning null.
+        return null;
+      }
+
+      if (newProfile) {
+          profileToReturn = newProfile as ProfileData;
+      } else {
+          // Should not happen if insert succeeded without error, but handle defensively
+          console.error(`Error inesperado: no se pudo obtener el perfil ${userId} después de la inserción.`);
+          return null;
       }
     }
 
-    // Ahora obtenemos el perfil (que debería existir)
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle() // Usar maybeSingle en lugar de single para evitar errores
+    return profileToReturn;
 
-    if (error) {
-      console.error("Error al obtener el perfil del usuario:", error.message)
-      // Devolver un perfil básico en lugar de null
-      return {
-        id: userId,
-        role: "customer",
-      }
-    }
-
-    // Si no se encontró el perfil (aunque debería existir ahora), devolver un perfil básico
-    if (!data) {
-      console.warn(`No se pudo obtener el perfil para el usuario ${userId} después de intentar crearlo`)
-      return {
-        id: userId,
-        role: "customer",
-      }
-    }
-
-    return data
   } catch (error) {
-    console.error("Error al obtener el perfil del usuario:", error)
-    // Devolver un perfil básico en lugar de null
-    return {
-      id: userId,
-      role: "customer",
+    // Handle unknown error type
+    if (error instanceof Error) {
+      console.error(`Error en getUserProfile para ${userId}:`, error.message);
+    } else {
+      console.error(`Error desconocido en getUserProfile para ${userId}:`, error);
     }
+    // Decide handling: return null, default, or throw? Returning null.
+    return null;
   }
 }
 
@@ -112,15 +152,22 @@ export async function getUserProfile(userId) {
  * @param userId ID del usuario
  * @returns true si el usuario es administrador, false en caso contrario
  */
-export async function isUserAdmin(userId) {
+export async function isUserAdmin(userId: string | undefined | null): Promise<boolean> { // Added return type
   try {
-    if (!userId) return false
+    if (!userId) return false;
 
-    const profile = await getUserProfile(userId)
-    return profile?.role === "admin"
+    // Note: This still relies on getUserProfile which might hit the DB.
+    // Consider using context data if available client-side.
+    const profile = await getUserProfile(userId);
+    return profile?.role === "admin";
   } catch (error) {
-    console.error("Error al verificar si el usuario es administrador:", error)
-    return false
+    // Handle unknown error type
+    if (error instanceof Error) {
+      console.error("Error al verificar si el usuario es administrador:", error.message);
+    } else {
+      console.error("Error desconocido al verificar si el usuario es administrador:", error);
+    }
+    return false;
   }
 }
 
@@ -132,76 +179,82 @@ export async function isUserAdmin(userId) {
  * @param companyName Nombre de la empresa (opcional)
  * @returns Resultado del registro
  */
-export async function registerUser(email, password, fullName, companyName = "") {
+interface RegisterResult {
+  success: boolean;
+  user?: User | null;
+  message: string;
+}
+export async function registerUser(
+  email: string,
+  password: string,
+  fullName: string,
+  companyName: string = ""
+): Promise<RegisterResult> { // Added return type
   try {
-    const supabase = createServerClient()
+    const supabase = await createServerClient(); // Added await
 
-    // Obtener la URL base de la aplicación desde variables de entorno
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || "https://tu-dominio.com"
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"; // Default to localhost for dev
 
-    // Asegurarse de que la URL no sea localhost en producción
-    const redirectUrl =
-      appUrl.includes("localhost") && process.env.NODE_ENV === "production"
-        ? "https://tu-dominio.com/auth/callback"
-        : `${appUrl}/auth/callback`
+    const redirectUrl = `${appUrl}/auth/callback`;
+    console.log(`URL de redirección para activación: ${redirectUrl}`);
 
-    console.log(`URL de redirección para activación: ${redirectUrl}`)
-
-    // Registrar el usuario en Auth con la URL de redirección correcta
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
+        // Add user metadata if needed (careful with sensitive data)
+        // data: { full_name: fullName, company_name: companyName }
       },
-    })
+    });
 
     if (authError) {
-      throw new Error(`Error al registrar el usuario: ${authError.message}`)
+      // Provide more specific error messages if possible
+      if (authError.message.includes('User already registered')) {
+          return { success: false, message: "Este correo electrónico ya está registrado." };
+      }
+      // Add more specific checks if needed
+      console.error("Error de Supabase al registrar:", authError);
+      throw new Error(`Error al registrar el usuario: ${authError.message}`);
     }
 
     if (!authData.user) {
-      throw new Error("No se pudo crear el usuario")
+        // This case might indicate email confirmation is pending or another issue
+        if (authData.session === null && !authData.user) {
+             console.log("Registro iniciado, esperando confirmación por correo electrónico.");
+             return {
+                 success: true, // Technically succeeded in initiating signup
+                 user: null, // No user object yet until confirmed
+                 message: "Usuario registrado. Por favor, verifica tu correo electrónico para activar tu cuenta."
+             };
+        }
+      throw new Error("No se pudo crear el usuario (authData.user es nulo)");
     }
 
-    // Verificar qué columnas existen en la tabla profiles
-    const { data: tableInfo, error: tableError } = await supabase.from("profiles").select("*").limit(1)
+    // Profile creation is often better handled by a DB trigger on auth.users insert
+    // or by getUserProfile ensuring creation.
+    // Attempting profile creation here can be complex due to potential timing issues
+    // with email confirmation. Let's rely on getUserProfile to create it on first access.
 
-    if (tableError) {
-      console.error("Error al verificar la estructura de la tabla profiles:", tableError.message)
-      // Continuar con la inserción básica
-    }
+    console.log(`Usuario ${authData.user.email} registrado. ID: ${authData.user.id}`);
 
-    // Preparar los datos del perfil basados en las columnas existentes
-    const profileData = {
-      id: authData.user.id,
-      role: "customer", // Por defecto, todos los usuarios nuevos son clientes
-    }
-
-    // Añadir full_name si la columna existe
-    if (tableInfo && Object.keys(tableInfo[0] || {}).includes("full_name")) {
-      profileData["full_name"] = fullName
-    }
-
-    // Crear el perfil del usuario
-    const { error: profileError } = await supabase.from("profiles").insert(profileData)
-
-    if (profileError) {
-      console.error("Error al crear el perfil del usuario:", profileError.message)
-      // No lanzamos error aquí para no bloquear el registro si falla la creación del perfil
-    }
-
+     // Consider sending the full user object if available and needed client-side,
+     // but often just success message is enough post-signup initiation.
     return {
       success: true,
-      user: authData.user,
+      user: authData.user, // Return the user object if available (might be null if confirmation needed)
       message: "Usuario registrado correctamente. Por favor, verifica tu correo electrónico para activar tu cuenta.",
-    }
+    };
   } catch (error) {
-    console.error("Error en registerUser:", error)
+    let message = "Error desconocido al registrar el usuario";
+    if (error instanceof Error) {
+        message = error.message; // Use the specific error message
+    }
+    console.error("Error en registerUser:", error);
     return {
       success: false,
-      message: error.message || "Error al registrar el usuario",
-    }
+      message: message,
+    };
   }
 }
 
@@ -211,170 +264,176 @@ export async function registerUser(email, password, fullName, companyName = "") 
  * @param password Contraseña del usuario
  * @returns Resultado del inicio de sesión
  */
-export async function signIn(email, password) {
+interface SignInResult {
+    success: boolean;
+    user?: User | null;
+    session?: any | null; // Consider using Session type from supabase-js
+    message: string;
+}
+export async function signIn(email: string, password: string): Promise<SignInResult> { // Added return type
   try {
-    // Usar el cliente del navegador para iniciar sesión
-    const supabase = createBrowserClient()
+    // Use the client-side client for sign-in
+    const supabase = createBrowserClient();
 
-    console.log("Iniciando sesión con Supabase...")
+    console.log("Iniciando sesión con Supabase...");
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
-    })
+    });
 
     if (error) {
-      console.error("Error de Supabase al iniciar sesión:", error)
-      throw new Error(`Error al iniciar sesión: ${error.message}`)
-    }
-
-    console.log("Sesión establecida correctamente:", data.session?.user?.email)
-
-    // Verificar que la sesión se haya establecido
-    const { data: sessionCheck } = await supabase.auth.getSession()
-    console.log("Verificación de sesión:", sessionCheck.session ? "Activa" : "No activa")
-
-    // Verificar si el usuario tiene un perfil, y si no, crearlo
-    // Nota: Esta parte se ejecuta en el cliente, por lo que no podemos usar createServerClient con admin: true
-    // En su lugar, confiamos en que las políticas RLS permitan esta operación o manejamos el error
-    if (data.user) {
-      try {
-        // Verificar si el perfil existe
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", data.user.id)
-
-        if (profileError) {
-          console.error("Error al verificar el perfil:", profileError)
-        } else if (!profileData || profileData.length === 0) {
-          console.log("Creando perfil para el usuario recién autenticado...")
-          const { error: insertError } = await supabase.from("profiles").insert({
-            id: data.user.id,
-            role: "customer", // Rol predeterminado
-          })
-
-          if (insertError) {
-            console.error("Error al crear el perfil:", insertError)
-            console.log("Nota: El perfil se creará automáticamente en el servidor cuando sea necesario")
-          } else {
-            console.log("Perfil creado exitosamente")
-          }
-        } else {
-          console.log("El perfil ya existe para este usuario")
-        }
-      } catch (profileCheckError) {
-        console.error("Error al verificar/crear el perfil:", profileCheckError)
+      console.error("Error de Supabase al iniciar sesión:", error);
+      // Map common errors to user-friendly messages
+      if (error.message === 'Invalid login credentials') {
+        return { success: false, message: "Credenciales de inicio de sesión inválidas." };
       }
+      if (error.message.includes('Email not confirmed')) {
+         return { success: false, message: "Por favor, confirma tu correo electrónico antes de iniciar sesión." };
+      }
+      // Generic error for others
+      return { success: false, message: `Error al iniciar sesión: ${error.message}` };
     }
 
-    return {
-      success: true,
-      user: data.user,
-      session: data.session,
-      message: "Sesión iniciada correctamente",
+    if (!data.session || !data.user) {
+        console.error("Error de inicio de sesión: No se recibió sesión o usuario de Supabase.");
+        return { success: false, message: "Error inesperado durante el inicio de sesión." };
     }
+
+    console.log("Sesión establecida correctamente:", data.session?.user?.email);
+
+    // Optional: Trigger profile check/creation via AuthProvider or similar mechanism
+    // rather than directly in signIn
+
+    return {
+        success: true,
+        user: data.user,
+        session: data.session,
+        message: "Inicio de sesión exitoso."
+    };
+
   } catch (error) {
-    console.error("Error en signIn:", error)
-    return {
-      success: false,
-      message: error.message || "Error al iniciar sesión",
-    }
+     let message = "Error desconocido durante el inicio de sesión.";
+     if (error instanceof Error) {
+         message = error.message;
+     }
+     console.error("Error en signIn:", error);
+     return {
+       success: false,
+       message: message,
+     };
   }
 }
 
 /**
- * Alias para signIn para mantener compatibilidad con código existente
- * @deprecated Use signIn instead
+ * Cierra la sesión del usuario actual (en el navegador)
  */
-export const loginUser = signIn
-
-/**
- * Cierra la sesión del usuario actual
- * @returns Resultado del cierre de sesión
- */
-export async function signOut() {
+interface SignOutResult {
+    success: boolean;
+    message: string;
+}
+export async function signOut(): Promise<SignOutResult> { // Added return type
   try {
-    const supabase = createBrowserClient()
-    const { error } = await supabase.auth.signOut()
+    const supabase = createBrowserClient();
+    const { error } = await supabase.auth.signOut();
 
     if (error) {
-      throw new Error(`Error al cerrar sesión: ${error.message}`)
+      console.error("Error de Supabase al cerrar sesión:", error);
+      throw new Error(`Error al cerrar sesión: ${error.message}`);
     }
 
-    return {
-      success: true,
-      message: "Sesión cerrada correctamente",
-    }
+    console.log("Sesión cerrada correctamente.");
+    return { success: true, message: "Sesión cerrada correctamente." };
+
   } catch (error) {
-    console.error("Error en signOut:", error)
-    return {
-      success: false,
-      message: error.message || "Error al cerrar sesión",
-    }
+     let message = "Error desconocido al cerrar sesión.";
+     if (error instanceof Error) {
+         message = error.message;
+     }
+     console.error("Error en signOut:", error);
+     return { success: false, message: message };
   }
 }
 
 /**
- * Alias para signOut para mantener compatibilidad con código existente
- * @deprecated Use signOut instead
- */
-export const logoutUser = signOut
-
-/**
- * Envía un enlace de restablecimiento de contraseña
+ * Inicia el proceso de restablecimiento de contraseña
  * @param email Email del usuario
  * @returns Resultado del envío
  */
-export async function resetPassword(email) {
+interface ResetPasswordResult {
+    success: boolean;
+    message: string;
+}
+export async function resetPassword(email: string): Promise<ResetPasswordResult> { // Added return type
   try {
-    const supabase = createServerClient()
+    // Reset password should ideally be initiated server-side for security
+    // But if using client-side:
+    const supabase = createBrowserClient(); // Or createServerClient if in server context
+
+    const redirectUrl = `${window.location.origin}/auth/update-password`; // URL where user sets new password
+    console.log("Enviando correo de restablecimiento de contraseña a:", email);
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
-    })
+      redirectTo: redirectUrl,
+    });
 
     if (error) {
-      throw new Error(`Error al enviar el enlace: ${error.message}`)
+      console.error("Error de Supabase al restablecer contraseña:", error);
+       // Avoid exposing detailed errors like "User not found"
+      // throw new Error(`Error al enviar correo: ${error.message}`);
+      return { success: false, message: "Error al intentar enviar el correo de restablecimiento." };
     }
 
-    return {
-      success: true,
-      message: "Enlace de restablecimiento enviado correctamente",
-    }
+    console.log("Correo de restablecimiento de contraseña enviado.");
+    return { success: true, message: "Si existe una cuenta con ese correo, se ha enviado un enlace para restablecer la contraseña." };
+
   } catch (error) {
-    console.error("Error en resetPassword:", error)
-    return {
-      success: false,
-      message: error.message || "Error al enviar el enlace de restablecimiento",
+    let message = "Error desconocido al intentar restablecer la contraseña.";
+    if (error instanceof Error) {
+        message = error.message;
     }
+    console.error("Error en resetPassword:", error);
+    return { success: false, message: message };
   }
 }
 
 /**
- * Actualiza la contraseña del usuario
+ * Actualiza la contraseña del usuario autenticado
  * @param newPassword Nueva contraseña
  * @returns Resultado de la actualización
  */
-export async function updatePassword(newPassword) {
+interface UpdatePasswordResult {
+    success: boolean;
+    message: string;
+}
+export async function updatePassword(newPassword: string): Promise<UpdatePasswordResult> { // Added return type
   try {
-    const supabase = createBrowserClient()
-    const { error } = await supabase.auth.updateUser({
+    // Password update requires an authenticated user session (client-side)
+    const supabase = createBrowserClient();
+
+    console.log("Actualizando contraseña del usuario...");
+    const { data, error } = await supabase.auth.updateUser({
       password: newPassword,
-    })
+    });
 
     if (error) {
-      throw new Error(`Error al actualizar la contraseña: ${error.message}`)
+      console.error("Error de Supabase al actualizar contraseña:", error);
+      throw new Error(`Error al actualizar la contraseña: ${error.message}`);
     }
 
-    return {
-      success: true,
-      message: "Contraseña actualizada correctamente",
+    if (!data.user) {
+        throw new Error("No se pudo actualizar la contraseña (data.user es nulo).");
     }
+
+    console.log("Contraseña actualizada correctamente para:", data.user.email);
+    return { success: true, message: "Contraseña actualizada correctamente." };
+
   } catch (error) {
-    console.error("Error en updatePassword:", error)
-    return {
-      success: false,
-      message: error.message || "Error al actualizar la contraseña",
+    let message = "Error desconocido al actualizar la contraseña.";
+    if (error instanceof Error) {
+        message = error.message;
     }
+    console.error("Error en updatePassword:", error);
+    return { success: false, message: message };
   }
 }
 

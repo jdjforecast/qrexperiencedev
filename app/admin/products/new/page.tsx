@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Save, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getCurrentUser, isAdmin } from "@/lib/auth"
+import { getCurrentUser, isUserAdmin } from "@/lib/auth"
 import { createProduct, uploadProductImage } from "@/lib/storage/products"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,7 +16,7 @@ import Image from "next/image"
 
 export default function NewProductPage() {
   const [userId, setUserId] = useState<string | null>(null)
-  const [isUserAdmin, setIsUserAdmin] = useState(false)
+  const [isUserAdminState, setIsUserAdminState] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState({
@@ -41,9 +41,9 @@ export default function NewProductPage() {
       if (user) {
         setUserId(user.id)
 
-        // Check if user is admin
-        const admin = await isAdmin(user.id)
-        setIsUserAdmin(admin)
+        // Check if user is admin using the correct function
+        const admin = await isUserAdmin(user.id)
+        setIsUserAdminState(admin)
 
         if (admin) {
           setIsLoading(false)
@@ -117,7 +117,7 @@ export default function NewProductPage() {
         stock: formData.stock,
         max_per_user: formData.max_per_user,
         sku: formData.sku,
-        image_url: null, // Será actualizado después si hay una imagen
+        image_url: undefined,
       })
 
       if (createError) {

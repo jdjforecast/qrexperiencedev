@@ -6,13 +6,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { getUserOrders } from "@/lib/orders"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-
-interface Order {
-  id: string
-  created_at: string
-  status: string
-  total: number
-}
+import { Order } from "@/types/order"
 
 export default function OrdersPage() {
   const { user } = useAuth()
@@ -143,9 +137,9 @@ export default function OrdersPage() {
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {orders.map((order) => (
-                  <tr key={order.id}>
+                  <tr key={order.order_id}>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <span className="font-medium text-gray-900">#{order.id.substring(0, 8)}</span>
+                      <span className="font-medium text-gray-900">#{order.order_id.substring(0, 8)}</span>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                       {formatDate(order.created_at)}
@@ -157,9 +151,9 @@ export default function OrdersPage() {
                         {getStatusText(order.status)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">${order.total.toFixed(2)}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">${order.total_amount.toFixed(2)}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm">
-                      <Link href={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-900">
+                      <Link href={`/orders/${order.order_id}`} className="text-blue-600 hover:text-blue-900">
                         Ver Detalles
                       </Link>
                     </td>

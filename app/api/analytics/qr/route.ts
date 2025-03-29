@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-
-// Función para crear el cliente de Supabase para la API
-function createAPIClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-  return createClient(supabaseUrl, supabaseKey)
-}
+// Remove the specific supabase-js import
+// import { createClient } from "@supabase/supabase-js"
+// Import the server client helper from lib/auth which handles cookies
+import { createServerClient, isUserAdmin } from "@/lib/auth"
+// Remove the import for the simpler server client
+// import { createServerClient as simpleServerClient } from "@/lib/supabase/server"
 
 // Define tipos para los datos de escaneo
 interface QRScanEvent {
@@ -37,23 +32,30 @@ interface QRScanStats {
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    // Initialize the cookie-aware server client
+    const supabase = await createServerClient()
+
+    // Get the user session from Supabase
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      console.error("Error getting Supabase session:", sessionError)
+      return NextResponse.json({ error: "Error checking authentication" }, { status: 500 })
+    }
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verificar si el usuario es administrador
-    const supabase = createAPIClient()
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", session.user.id)
-      .single()
+    // Check if the user is an admin using the helper function
+    const isAdmin = await isUserAdmin(session.user.id)
 
-    if (userError || !userData || userData.role !== "admin") {
+    if (!isAdmin) {
+      console.warn(`User ${session.user.id} attempted to access QR analytics without admin role.`);
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+
+    // Proceed with fetching stats now that auth is confirmed
 
     // 1. Obtener el total de escaneos
     const { count: totalScans, error: countError } = await supabase

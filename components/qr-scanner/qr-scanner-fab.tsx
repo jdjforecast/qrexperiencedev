@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Scan } from "lucide-react"
 import dynamic from "next/dynamic"
+import { toast } from "react-hot-toast"
 
 // Importar la librería de forma dinámica para evitar problemas de SSR
 const Html5QrcodeScanner = dynamic(() => import("html5-qrcode").then((mod) => mod.Html5QrcodeScanner), { ssr: false })
@@ -78,46 +79,57 @@ export default function QrScannerFab() {
   }, [showScanner])
 
   const onScanSuccess = (decodedText: string) => {
-    // Cerrar el escáner
+    // Close the scanner immediately
     setShowScanner(false)
+    setScannerLoaded(false) // Ensure scanner stops trying to load
+    // Ensure body scroll is restored
+    document.body.style.overflow = "auto"; 
+
+    console.log("FAB QR scanned (expecting URL):", decodedText)
 
     try {
-      // Verificar si la URL es válida y pertenece a nuestro dominio
+      // Try to parse as a URL
       const url = new URL(decodedText)
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || window.location.origin
+      const appOrigin = new URL(appUrl).origin
 
-      if (url.origin === new URL(appUrl).origin) {
-        // Si es una URL de nuestra aplicación, navegar a ella
-        router.push(url.pathname + url.search)
-      } else {
-        // Si es una URL externa, verificar si es un código de producto válido
-        if (decodedText.includes("/product/")) {
-          const productId = decodedText.split("/product/")[1].split("?")[0]
-          router.push(`/product/${productId}`)
+      // Check if it's a URL from our app
+      if (url.origin === appOrigin) {
+        // Check if it looks like a product page URL
+        if (url.pathname.startsWith("/product/")) {
+          console.log(`Navigating to internal product page: ${url.pathname}${url.search}`)
+          // Navigate to the product page within the app
+          router.push(url.pathname + url.search)
         } else {
-          alert("Código QR no válido. Por favor, escanee un código QR de producto válido.")
+          // It's another internal URL, navigate to it
+          console.log(`Navigating to internal page: ${url.pathname}${url.search}`)
+          router.push(url.pathname + url.search)
         }
+      } else {
+        // It's a valid URL but external, open in new tab for safety
+        console.log("Opening external URL:", decodedText)
+        window.open(decodedText, "_blank", "noopener,noreferrer")
+        // Optionally show a toast message about opening an external link
+        toast("Abriendo enlace externo...") 
       }
     } catch (error) {
-      // Si no es una URL válida, verificar si es un ID de producto
-      if (decodedText.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
-        router.push(`/product/${decodedText}`)
-      } else {
-        alert("Código QR no reconocido. Por favor, intente nuevamente.")
-      }
+      // Not a valid URL - show error message (or potentially ignore)
+      console.warn("Scanned text is not a valid URL:", decodedText, error)
+      // Use toast for non-blocking error notification instead of alert
+      toast.error("Código QR no contiene una URL válida.") 
     }
   }
 
   const onScanFailure = (errorMessage: string) => {
-    // Solo registrar el error, no mostrar al usuario para evitar spam
-    console.error("Error al escanear:", errorMessage)
-
-    // Si el error persiste por mucho tiempo, mostrar un mensaje más amigable
-    if (errorMessage.includes("No MultiFormat Readers were able to detect the code")) {
-      // No hacemos nada, es normal cuando no hay un QR en la vista
-    } else if (errorMessage.includes("Camera access denied")) {
-      setError("Acceso a la cámara denegado. Por favor, permite el acceso a la cámara e intenta nuevamente.")
+    // Only log errors, don't bother the user unless necessary
+    // console.error("FAB QR Scan Error:", errorMessage);
+    if (errorMessage.includes("Camera access denied")) {
+        setError("Acceso a la cámara denegado. Por favor, permite el acceso en la configuración de tu navegador.")
+        // Consider stopping scan/closing modal if permission denied?
+    } else if (errorMessage.includes("NotAllowedError")) { 
+        setError("Permiso para usar la cámara denegado.")
     }
+    // Ignore other common errors like "No QR code found"
   }
 
   const handleOpenScanner = () => {

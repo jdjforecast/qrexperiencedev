@@ -7,27 +7,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { getOrderById } from "@/lib/orders"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-
-interface OrderItem {
-  id: string
-  quantity: number
-  price: number
-  product_id: string
-  products: {
-    id: string
-    name: string
-    image_url: string | null
-    code: string
-  }
-}
-
-interface Order {
-  id: string
-  created_at: string
-  status: string
-  total: number
-  order_items: OrderItem[]
-}
+import { Order } from "@/types/order"
 
 export default function OrderDetailPage() {
   const { id } = useParams()
@@ -40,16 +20,25 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     async function loadOrder() {
-      if (!user || !id) return
+      const orderId = typeof id === 'string' ? id : null;
+      if (!user || !orderId) {
+        setIsLoading(false);
+        setError(orderId === null ? "ID de pedido inválido." : null);
+        return;
+      }
 
       try {
         setIsLoading(true)
-        const result = await getOrderById(id as string)
+        const result = await getOrderById(orderId)
 
-        if (result.success) {
-          setOrder(result.data)
+        if (result.success && result.data) {
+          setOrder(result.data);
+        } else if (result.success) {
+          setError("No se encontraron datos para el pedido.");
+          setOrder(null);
         } else {
           setError(result.error || "Error al cargar el pedido")
+          setOrder(null);
         }
       } catch (err) {
         console.error("Error al cargar el pedido:", err)
@@ -123,7 +112,7 @@ export default function OrderDetailPage() {
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex flex-wrap items-center justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold">Pedido #{order.id.substring(0, 8)}</h2>
+                      <h2 className="text-lg font-semibold">Pedido #{order.order_id.substring(0, 8)}</h2>
                       <p className="text-sm text-gray-600">Realizado el {formatDate(order.created_at)}</p>
                     </div>
                     <span
@@ -135,14 +124,14 @@ export default function OrderDetailPage() {
                 </div>
 
                 <ul className="divide-y divide-gray-200">
-                  {order.order_items.map((item) => (
-                    <li key={item.id} className="p-4">
+                  {order.order_items.map((item, index) => (
+                    <li key={item.products?.id ?? index} className="p-4">
                       <div className="flex items-center space-x-4">
                         <div className="relative h-16 w-16 flex-shrink-0">
-                          {item.products.image_url ? (
+                          {item.products?.image_url ? (
                             <Image
-                              src={item.products.image_url || "/placeholder.svg"}
-                              alt={item.products.name}
+                              src={item.products.image_url}
+                              alt={item.products?.name ?? 'Producto sin nombre'}
                               fill
                               className="rounded-md object-cover"
                             />
@@ -154,8 +143,7 @@ export default function OrderDetailPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-900">{item.products.name}</p>
-                          <p className="text-sm text-gray-500">Código: {item.products.code}</p>
+                          <p className="truncate text-sm font-medium text-gray-900">{item.products?.name ?? 'Producto desconocido'}</p>
                         </div>
 
                         <div className="text-right">
@@ -176,7 +164,7 @@ export default function OrderDetailPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${order.total.toFixed(2)}</span>
+                    <span>${order.total_amount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Envío</span>
@@ -187,7 +175,7 @@ export default function OrderDetailPage() {
                 <div className="my-4 border-t border-gray-200 pt-4">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total</span>
-                    <span>${order.total.toFixed(2)}</span>
+                    <span>${order.total_amount.toFixed(2)}</span>
                   </div>
                 </div>
 

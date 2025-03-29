@@ -1,21 +1,31 @@
-import { getBrowserClient, createServerClient } from "../supabase"
+import { createClientClient } from "@/lib/supabase/client"
+import { createServerClient } from "../supabase"
 import type { Product } from "@/types/product"
+import { ProductSchema, NewProductSchema } from "@/types/schemas"
+import { z } from "zod"
 
 // Crear un nuevo producto
-export async function createProduct(productData: Omit<Product, "id" | "created_at">) {
+export async function createProduct(productData: z.input<typeof NewProductSchema>) {
+  const validation = NewProductSchema.safeParse(productData)
+  if (!validation.success) {
+    console.error("Internal Validation Failed (createProduct):", validation.error.errors)
+    return { data: null, error: new Error("Datos de producto inválidos internamente.") }
+  }
+  const validatedData = validation.data
+
   try {
     const supabase = createServerClient()
 
-    if (!productData || !productData.name) {
+    if (!validatedData || !validatedData.name) {
       return {
         data: null,
         error: new Error("Datos de producto inválidos o incompletos"),
       }
     }
 
-    console.log(`Creando nuevo producto: ${productData.name}`)
+    console.log(`Creando nuevo producto: ${validatedData.name}`)
 
-    const { data, error } = await supabase.from("products").insert(productData).select().single()
+    const { data, error } = await supabase.from("products").insert(validatedData).select().single()
 
     if (error) {
       console.error("Error al crear producto:", error)
@@ -36,7 +46,7 @@ export async function createProduct(productData: Omit<Product, "id" | "created_a
 // Obtener todos los productos
 export async function getAllProducts() {
   try {
-    const supabase = getBrowserClient()
+    const supabase = createClientClient()
     console.log("Obteniendo lista de productos")
 
     const { data, error } = await supabase.from("products").select("*").order("name")
@@ -64,7 +74,7 @@ export async function getProductsByCategory(category: string) {
       return { data: [], error: new Error("Categoría no especificada") }
     }
 
-    const supabase = getBrowserClient()
+    const supabase = createClientClient()
     console.log(`Obteniendo productos de categoría: ${category}`)
 
     const { data, error } = await supabase.from("products").select("*").eq("category", category).order("name")
@@ -92,7 +102,7 @@ export async function getProductById(id: string) {
       return { data: null, error: new Error("ID de producto no especificado") }
     }
 
-    const supabase = getBrowserClient()
+    const supabase = createClientClient()
     console.log(`Obteniendo producto con ID: ${id}`)
 
     const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
@@ -220,7 +230,7 @@ export async function uploadProductImage(file: File, productId: string) {
       }
     }
 
-    const supabase = getBrowserClient()
+    const supabase = createClientClient()
     console.log(`Subiendo imagen para producto ID: ${productId}`)
 
     // Crear un nombre único para el archivo
@@ -361,7 +371,7 @@ export function generateFriendlyUrl(name: string, id: string): string {
  */
 export async function updateProductUrl(productId: string, name: string) {
   try {
-    const supabase = getBrowserClient()
+    const supabase = createClientClient()
 
     // Generar URL amigable
     const friendlyUrl = generateFriendlyUrl(name, productId)

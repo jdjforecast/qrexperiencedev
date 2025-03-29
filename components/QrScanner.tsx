@@ -3,24 +3,19 @@
 import { useRef, useState, useEffect } from "react"
 import { Html5QrcodeScanner } from "html5-qrcode"
 import { useAuth } from "@/hooks/auth"
-import { getSupabaseClient } from "@/lib/supabase/client"
+import { createClientClient } from "@/lib/supabase/client"
 import { trackQRScan, getDeviceInfo } from "@/lib/tracking/qr-events"
+import { getProductClientSide } from "@/lib/product-service"
 import { toast } from "react-hot-toast"
 import { Button } from "./ui/button"
 import { Loader2, QrCode, XCircle, CheckCircle, RefreshCw } from "lucide-react"
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  image_url?: string
-}
+import { ProductData } from "@/types/cart"
+import { ProductDataSchema } from "@/types/schemas"
 
 interface ScannerProps {
-  onScanSuccess?: (product: Product) => void
+  onScanSuccess?: (product: ProductData) => void
   onScanError?: (error: string) => void
-  onAddToCart?: (product: Product, quantity: number) => void
+  onAddToCart?: (product: ProductData, quantity: number) => void
   showAddToCartButton?: boolean
 }
 
@@ -37,7 +32,7 @@ export default function QrScanner({
   onAddToCart,
   showAddToCartButton = true,
 }: ScannerProps) {
-  const [scannedProduct, setScannedProduct] = useState<Product | null>(null)
+  const [scannedProduct, setScannedProduct] = useState<ProductData | null>(null)
   const [showProductModal, setShowProductModal] = useState(false)
   const [isScanning, setIsScanning] = useState(true)
   const [scanningStatus, setScanningStatus] = useState<"ready" | "scanning" | "success" | "error">("ready")
@@ -45,7 +40,7 @@ export default function QrScanner({
   const [quantity, setQuantity] = useState(1)
 
   const { user } = useAuth()
-  const supabase = getSupabaseClient()
+  const supabase = createClientClient()
   const scannerRef = useRef<Html5QrcodeScanner | null>(null)
   const scanAttempts = useRef(0)
 
@@ -86,6 +81,28 @@ export default function QrScanner({
     }
   }, [])
 
+  // Extract product ID from URL
+  const extractProductIdFromUrl = (url: string): string | null => {
+    try {
+      const urlObject = new URL(url);
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || window.location.origin;
+      const appOrigin = new URL(appUrl).origin;
+
+      // Check if it's a URL from our app and matches the product path
+      if (urlObject.origin === appOrigin && urlObject.pathname.startsWith("/product/")) {
+        const pathParts = urlObject.pathname.split('/');
+        // Expecting /product/[id], so id should be the 3rd part (index 2)
+        if (pathParts.length >= 3 && pathParts[2]) {
+          return pathParts[2]; // This could be the UUID or the urlpage slug
+        }
+      }
+    } catch (e) {
+      // Not a valid URL, might be a raw ID or code (handle later if needed)
+      console.warn("Scanned text is not a valid URL:", url)
+    }
+    return null;
+  }
+
   /**
    * Procesa el QR escaneado validando el formato, buscando el producto
    * y mostrando el resultado al usuario
@@ -94,78 +111,63 @@ export default function QrScanner({
     try {
       setScanningStatus("scanning")
       scanAttempts.current = 0
+      console.log("QR scanned (expecting URL):", decodedText)
 
-      console.log("QR escaneado:", decodedText)
-
-      // Validar formato del QR (código alfanumérico de 8 caracteres)
-      if (!decodedText.match(/^[A-Za-z0-9]{8}$/)) {
-        throw new Error("Formato de QR inválido. Se esperaba un código de 8 caracteres.")
+      // 1. Extract Product ID/Slug from URL
+      const productIdOrSlug = extractProductIdFromUrl(decodedText);
+      if (!productIdOrSlug) {
+        throw new Error("Código QR no contiene una URL de producto válida.");
       }
 
-      // Buscar el código QR en la base de datos
-      const { data: qrData, error: qrError } = await supabase
-        .from("qr_codes")
-        .select(`
-          id,
-          product_id,
-          products (*)
-        `)
-        .eq("code", decodedText)
-        .single()
+      // 2. Fetch Product Data using the extracted ID/Slug
+      const productResult = await getProductClientSide(productIdOrSlug);
 
-      if (qrError || !qrData) {
-        console.error("Error consultando QR:", qrError)
-        throw new Error("Código QR no encontrado en la base de datos")
+      if (!productResult.success) {
+        // Distinguish between not found and other errors
+        if (productResult.productNotFound) {
+           throw new Error("Producto no encontrado para este código QR.");
+        } else {
+           throw new Error(productResult.error || "Error al buscar el producto.");
+        }
       }
 
-      if (!qrData.product_id || !qrData.products) {
-        throw new Error("Producto asociado al QR no encontrado")
-      }
+      // 3. Get validated product data
+      const product: ProductData = productResult.data;
 
-      // Asegurar que el producto tenga el formato correcto
-      const product = qrData.products as unknown as Product
-
-      // Registrar escaneo exitoso
+      // 4. Track Scan Event
       await trackQRScan({
-        qr_code_id: qrData.id,
+        qr_code_id: decodedText, // Track the original scanned URL
         user_id: user?.id,
         device_info: getDeviceInfo(),
         success: true,
         action_taken: "scan",
-      })
+      });
 
-      // Actualizar contador de escaneos
-      await supabase.rpc("increment_qr_scan_count", {
-        qr_code_id: qrData.id,
-      })
-
-      // Mostrar producto
+      // 5. Update state and show modal
       setScanningStatus("success")
       setScannedProduct(product)
       setShowProductModal(true)
+      setQuantity(1);
 
-      // Detener escáner temporalmente
+      // Pause scanner
       if (scannerRef.current) {
-        try {
-          scannerRef.current.pause()
-          setIsScanning(false)
-        } catch (e) {
-          console.warn("Error pausando escáner", e)
-        }
+          try {
+              scannerRef.current.pause();
+              setIsScanning(false);
+          } catch (e) { console.warn("Error pausing scanner", e); }
       }
 
-      // Notificar al componente padre
-      if (onScanSuccess && product) {
+      // Notify parent (optional)
+      if (onScanSuccess) {
         onScanSuccess(product)
       }
+
     } catch (error) {
       setScanningStatus("error")
-
-      const errorMessage = error instanceof Error ? error.message : "Error al escanear QR"
-
+      const errorMessage = error instanceof Error ? error.message : "Error al procesar QR"
       setErrorMessage(errorMessage)
 
-      // Registrar escaneo fallido
+      // Track Scan Failure
       await trackQRScan({
         qr_code_id: decodedText,
         user_id: user?.id,
@@ -175,22 +177,20 @@ export default function QrScanner({
         error: errorMessage,
       })
 
-      // Notificar error
       toast.error(errorMessage)
+      if (onScanError) { onScanError(errorMessage) }
 
-      if (onScanError) {
-        onScanError(errorMessage)
-      }
-
-      // Reintentar el escaneo automáticamente en 3 segundos
+      // Automatic retry logic (keep for now)
       setTimeout(() => {
         if (scannerRef.current && !showProductModal) {
-          setScanningStatus("ready")
-          setErrorMessage(null)
-          scannerRef.current.resume()
-          setIsScanning(true)
+            setScanningStatus("ready");
+            setErrorMessage(null);
+            try {
+                scannerRef.current.resume();
+                setIsScanning(true);
+            } catch (e) { console.warn("Error resuming scanner after error", e); }
         }
-      }, 3000)
+      }, 3000);
     }
   }
 
@@ -211,174 +211,124 @@ export default function QrScanner({
     }
   }
 
-  const handleAddToCart = async (product: Product, qty = 1) => {
+  const handleAddToCart = async (product: ProductData, qty = 1) => {
+    if (!onAddToCart) {
+      console.error("QrScanner: onAddToCart prop is missing, cannot add item.");
+      toast.error("Error: No se pudo agregar el producto al carrito.");
+      return; // Exit if the callback is not provided
+    }
+
     try {
-      // Registrar acción en tracking
+      // Track action (use validated product data)
       await trackQRScan({
-        qr_code_id: product.id,
+        qr_code_id: product.id, // Or qrData.id if available? Using product.id for now
         user_id: user?.id,
         device_info: getDeviceInfo(),
         success: true,
         action_taken: "add_to_cart",
       })
 
-      // Si hay un callback personalizado, usarlo
-      if (onAddToCart) {
-        onAddToCart(product, qty)
-      } else {
-        // Implementación por defecto con localStorage
-        const cart = JSON.parse(localStorage.getItem("cart") || "[]")
-        const existingItemIndex = cart.findIndex((item: any) => item.id === product.id)
-
-        if (existingItemIndex >= 0) {
-          cart[existingItemIndex].quantity += qty
-        } else {
-          cart.push({
-            id: product.id,
-            name: product.name,
-            price: product.price || 0,
-            quantity: qty,
-            image_url: product.image_url,
-          })
-        }
-
-        localStorage.setItem("cart", JSON.stringify(cart))
-      }
+      // Call the provided callback to handle adding to cart via service
+      onAddToCart(product, qty)
 
       toast.success(`${product.name} agregado al carrito (${qty})`)
       setShowProductModal(false)
 
-      // Reanudar escáner
-      resumeScanner()
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Error al agregar al carrito"
+      // Resume scanning after adding to cart and closing modal
+      // Ensure scanner is only resumed if it was paused and modal is closed
+      setTimeout(() => {
+        if (scannerRef.current && !showProductModal && !isScanning) {
+          try {
+            scannerRef.current.resume();
+            setIsScanning(true);
+            setScanningStatus("ready");
+            setErrorMessage(null);
+          } catch (e) {
+            console.warn("Error resuming scanner after add to cart", e);
+          }
+        }
+      }, 500); // Short delay to allow modal to close
 
-      toast.error(errorMessage)
+    } catch (error) {
+      console.error("Error during AddToCart callback or tracking:", error);
+      toast.error("Error al agregar al carrito.");
+      // Optionally call onScanError here too?
     }
   }
 
-  const closeModal = () => {
+  const closeModalAndResume = () => {
     setShowProductModal(false)
-    resumeScanner()
-  }
-
-  const resumeScanner = () => {
+    setScannedProduct(null)
+    // Resume scanning if it's not already running
     if (scannerRef.current && !isScanning) {
-      try {
-        scannerRef.current.resume()
-        setIsScanning(true)
-        setScanningStatus("ready")
-        setErrorMessage(null)
-      } catch (e) {
-        console.warn("Error reanudando escáner", e)
-
-        // Intentar reiniciar el escáner como alternativa
-        scannerRef.current.render(handleQrScan, handleQrError)
-      }
+        try {
+            scannerRef.current.resume();
+            setIsScanning(true);
+            setScanningStatus("ready");
+            setErrorMessage(null);
+        } catch (e) {
+            console.warn("Error resuming scanner from modal close", e);
+        }
     }
   }
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {/* Contenedor del escáner con overlay de estado */}
-      <div className="relative rounded-lg overflow-hidden">
-        <div id="reader" className="w-full"></div>
-
-        {/* Overlay de estados */}
-        {scanningStatus === "scanning" && (
-          <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-            <div className="bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow flex items-center space-x-2">
-              <Loader2 className="animate-spin text-primary" size={24} />
-              <span>Procesando QR...</span>
-            </div>
+    <div className="relative w-full max-w-md mx-auto p-4 border rounded-lg shadow-lg bg-gray-800 text-white">
+      {/* Scanner container */}
+      <div id="reader" className={`${showProductModal ? 'hidden' : ''}`}></div>
+      
+      {/* Status Overlay */} 
+      {!showProductModal && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 pointer-events-none">
+              {scanningStatus === 'scanning' && <Loader2 className="animate-spin h-12 w-12 text-blue-400" />}
+              {scanningStatus === 'error' && <XCircle className="h-16 w-16 text-red-500 mb-2" />}
+              {scanningStatus === 'error' && errorMessage && <p className="text-center text-red-400 mt-2 px-4">{errorMessage}</p>}
+              {scanningStatus === 'ready' && <QrCode className="h-16 w-16 text-gray-400 animate-pulse" />}
           </div>
-        )}
-
-        {scanningStatus === "error" && errorMessage && (
-          <div className="absolute inset-0 bg-red-900/20 flex items-center justify-center">
-            <div className="bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow max-w-xs text-center">
-              <XCircle className="text-red-500 mx-auto mb-2" size={32} />
-              <p className="font-medium text-red-600 mb-2">Error</p>
-              <p className="text-sm mb-3">{errorMessage}</p>
-              <Button size="sm" onClick={resumeScanner} className="mx-auto flex items-center gap-1">
-                <RefreshCw size={14} /> Reintentar
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {scanningStatus === "ready" && !isScanning && (
-        <div className="text-center mt-4">
-          <Button onClick={resumeScanner} className="flex items-center gap-2">
-            <QrCode size={16} /> Reactivar Escáner
-          </Button>
-        </div>
       )}
 
-      {/* Modal de producto escaneado */}
+      {/* Product Modal */} 
       {showProductModal && scannedProduct && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg p-6 max-w-sm w-full shadow-lg">
-            <div className="relative">
-              {scannedProduct.image_url ? (
-                <img
-                  src={scannedProduct.image_url}
-                  alt={scannedProduct.name}
-                  className="w-full h-48 object-contain rounded-lg mb-4"
-                />
-              ) : (
-                <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center mb-4">
-                  <QrCode size={64} className="text-muted-foreground" />
-                </div>
-              )}
+        <div className="absolute inset-0 bg-gray-900 bg-opacity-95 p-4 flex flex-col items-center justify-center z-10">
+          <h3 className="text-xl font-bold mb-3 text-center">{scannedProduct.name}</h3>
+          {scannedProduct.image_url && (
+            <img 
+              src={scannedProduct.image_url} 
+              alt={scannedProduct.name} 
+              className="w-32 h-32 object-cover rounded-md mb-4 border border-gray-600"
+            />
+          )}
+          <p className="text-lg font-semibold mb-4">${scannedProduct.price?.toFixed(2) ?? 'N/A'}</p>
+          {/* Quantity Selector */} 
+          <div className="flex items-center justify-center space-x-3 mb-5">
+            <Button size="icon" variant="outline" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1}>-</Button>
+            <span className="text-xl font-semibold w-10 text-center">{quantity}</span>
+            <Button size="icon" variant="outline" onClick={() => setQuantity(q => q + 1)} disabled={quantity >= (scannedProduct.stock ?? 99)}>+</Button> 
+          </div>
+          {/* Stock Info */} 
+          <p className="text-sm text-gray-400 mb-5">
+            {scannedProduct.stock !== null && scannedProduct.stock > 0 
+              ? `Stock disponible: ${scannedProduct.stock}` 
+              : <span className="text-red-400">Agotado</span>}
+          </p>
 
-              <div className="absolute top-2 right-2">
-                <div className="bg-green-500 text-white text-xs font-bold rounded-full py-1 px-2 flex items-center space-x-1">
-                  <CheckCircle size={12} />
-                  <span>Escaneado</span>
-                </div>
-              </div>
-            </div>
-
-            <h3 className="text-xl font-bold mb-2">{scannedProduct.name}</h3>
-            <p className="text-muted-foreground mb-4">{scannedProduct.description}</p>
-            <p className="text-lg font-semibold mb-4">${scannedProduct.price.toFixed(2)}</p>
-
-            {showAddToCartButton && (
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                  >
-                    -
-                  </Button>
-                  <span className="w-8 text-center">{quantity}</span>
-                  <Button size="sm" variant="outline" onClick={() => setQuantity(quantity + 1)}>
-                    +
-                  </Button>
-                </div>
-                <span className="text-sm font-medium">Total: ${(scannedProduct.price * quantity).toFixed(2)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeModal}>
-                Cerrar
+          {/* Action Buttons */} 
+          <div className="w-full space-y-3">
+            {showAddToCartButton && scannedProduct.stock !== null && scannedProduct.stock > 0 && (
+              <Button 
+                className="w-full bg-blue-600 hover:bg-blue-700" 
+                onClick={() => handleAddToCart(scannedProduct, quantity)}
+              >
+                Agregar {quantity} al Carrito
               </Button>
-
-              {showAddToCartButton && (
-                <Button
-                  onClick={() => handleAddToCart(scannedProduct, quantity)}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  Agregar al carrito
-                </Button>
-              )}
-            </div>
+            )}
+            <Button 
+              variant="outline" 
+              className="w-full border-gray-600 hover:bg-gray-700"
+              onClick={closeModalAndResume}
+            >
+              {isScanning ? 'Cerrar' : 'Escanear Otro'}
+            </Button>
           </div>
         </div>
       )}
