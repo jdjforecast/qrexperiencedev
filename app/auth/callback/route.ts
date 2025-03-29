@@ -1,35 +1,43 @@
-import { createSupabaseClient } from "@/lib/supabase/index"
-import { NextResponse } from "next/server"
+import { createServerClient } from '@/lib/supabase/index';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   try {
     // Obtener la URL actual
-    const requestUrl = new URL(request.url)
-    const code = requestUrl.searchParams.get("code")
-
+    const requestUrl = new URL(request.url);
+    const code = requestUrl.searchParams.get('code');
+    const next = requestUrl.searchParams.get('next') || '/dashboard';
+    
     // Si no hay código, redirigir a la página de inicio
     if (!code) {
-      return NextResponse.redirect(new URL("/", requestUrl.origin))
+      return NextResponse.redirect(new URL('/', requestUrl.origin));
     }
-
+    
     // Procesar el código de autenticación
-    const supabase = createSupabaseClient()
-
+    const cookieStore = cookies();
+    const supabase = createServerClient({
+      get: (name) => {
+        const cookie = cookieStore.get(name);
+        return { value: cookie?.value };
+      }
+    });
+    
     // Intercambiar el código por una sesión
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    
     if (error) {
-      console.error("Error al procesar el código de autenticación:", error)
+      console.error('Error al procesar el código de autenticación:', error);
       // Redirigir a la página de login con un mensaje de error
-      return NextResponse.redirect(new URL("/login?error=Error+al+activar+la+cuenta", requestUrl.origin))
+      return NextResponse.redirect(new URL('/login?error=Error+al+activar+la+cuenta', requestUrl.origin));
     }
-
-    // Redirigir a la página de dashboard o inicio después de la autenticación exitosa
-    return NextResponse.redirect(new URL("/dashboard", requestUrl.origin))
+    
+    // Redirigir a la página de dashboard o a la especificada en next
+    return NextResponse.redirect(new URL(next, requestUrl.origin));
   } catch (error) {
-    console.error("Error en la ruta de callback:", error)
+    console.error('Error en la ruta de callback:', error);
     // Redirigir a la página de inicio en caso de error
-    return NextResponse.redirect(new URL("/", request.url))
+    return NextResponse.redirect(new URL('/', new URL(request.url).origin));
   }
 }
 

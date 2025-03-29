@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { createServerClient } from '@/lib/supabase/index';
 
 // Rutas que no requieren autenticación
 const PUBLIC_ROUTES = ['/', '/login', '/register', '/auth/callback', '/auth/forgot-password'];
@@ -7,46 +7,62 @@ const PUBLIC_ROUTES = ['/', '/login', '/register', '/auth/callback', '/auth/forg
 // Rutas para admins
 const ADMIN_ROUTES = ['/admin'];
 
-export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const pathname = req.nextUrl.pathname;
   
   // Comprobar si es ruta pública
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
-    path === route || path.startsWith(`${route}/`)
+    pathname === route || pathname.startsWith(`${route}/`)
   );
 
   // Si es una ruta pública, permitir acceso
   if (isPublicRoute) {
-    return NextResponse.next();
+    return res;
   }
   
-  // Obtener sesión de NextAuth
-  const token = await getToken({ 
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET
+  // Crear cliente Supabase usando cookies
+  const supabase = createServerClient({
+    get: (name) => {
+      const cookie = req.cookies.get(name);
+      return { value: cookie?.value };
+    }
   });
   
+  // Verificar sesión
+  const { data: { session } } = await supabase.auth.getSession();
+  
   // Si no hay sesión y no es ruta pública, redirigir a login
-  if (!token) {
-    const url = request.nextUrl.clone();
+  if (!session) {
+    const url = req.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('returnUrl', path);
+    url.searchParams.set('returnUrl', pathname);
     return NextResponse.redirect(url);
   }
-
+  
   // Comprobar si es ruta de admin
   const isAdminRoute = ADMIN_ROUTES.some(route => 
-    path === route || path.startsWith(`${route}/`)
+    pathname === route || pathname.startsWith(`${route}/`)
   );
-
+  
   // Si es ruta de admin, verificar rol
-  if (isAdminRoute && token.role !== 'admin') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
+  if (isAdminRoute) {
+    // Obtener perfil de usuario
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+    
+    // Si no es admin, redirigir
+    if (!profile || profile.role !== 'admin') {
+      const url = req.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
   }
-
-  return NextResponse.next();
+  
+  return res;
 }
 
 export const config = {
