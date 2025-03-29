@@ -1,69 +1,68 @@
-"use client"
+import { getCurrentUser, getUserProfile } from "@/lib/auth"
+import RouteGuard from "@/components/auth/route-guard"
+import type { User } from '@supabase/supabase-js'; // Import User type for profile
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
-import { getUserProfile } from "@/lib/auth"
-import { RouteGuard } from "@/components/auth/route-guard"
+// Define Profile type inline or import if defined elsewhere
+interface ProfileData {
+    id: string;
+    role: 'customer' | 'admin' | string;
+    full_name?: string;
+    company_name?: string;
+    [key: string]: any;
+}
 
-export default function ProfilePage() {
-  const { user } = useAuth()
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+// Make the component async
+export default async function ProfilePage() {
+  // Fetch data directly on the server
+  const user: User | null = await getCurrentUser();
+  let profile: ProfileData | null = null;
+  let error: string | null = null;
 
-  useEffect(() => {
-    async function loadProfile() {
-      if (!user) {
-        setLoading(false)
-        return
+  if (user) {
+    try {
+      // Fetch profile data (getUserProfile handles potential null profile)
+      profile = await getUserProfile(user.id); 
+      if (!profile) {
+          // Optional: Set an error if profile fetch technically succeeded but returned null unexpectedly
+          // error = "No se encontró información de perfil detallada.";
+          console.warn(`No profile data returned for user ${user.id}, but user exists.`);
       }
-
-      try {
-        setLoading(true)
-        setError(null)
-
-        const { data, error } = await getUserProfile(user.id)
-
-        if (error) {
-          throw error
-        }
-
-        setProfile(data)
-        setLoading(false)
-      } catch (err) {
-        console.error("Error al cargar perfil:", err)
-        setError("No se pudo cargar la información del perfil")
-        setLoading(false)
-      }
+    } catch (err) {
+      console.error("Error loading profile server-side:", err);
+      error = "No se pudo cargar la información del perfil";
     }
+  } else {
+     // Handle case where user is not logged in (RouteGuard might handle this too)
+     // Depending on RouteGuard behavior, this might be redundant or necessary
+     // For now, we let RouteGuard handle the redirect if user is null
+     console.log("ProfilePage: User not logged in.");
+  }
 
-    loadProfile()
-  }, [user])
-
+  // Render based on fetched data
   return (
-    <RouteGuard>
+    <RouteGuard> { /* RouteGuard likely handles the redirect if user is null */}
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Perfil de Usuario</h1>
 
-        {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
-          </div>
-        ) : error ? (
+        {/* Removed client-side loading state, handled by server render */}
+         
+        {error ? (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             <p>{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Reintentar
-            </button>
+            {/* Revalidate or link to retry? Simple message for now. */}
           </div>
+        // Check for user existence before profile check, as profile depends on user
+        ) : !user ? (
+            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+                <p>Debes iniciar sesión para ver tu perfil.</p> { /* Or rely on RouteGuard */}
+            </div>
         ) : !profile ? (
+          // This case now means getUserProfile returned null or wasn't called (user null)
           <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-            <p>No se encontró información de perfil</p>
+            <p>No se encontró información de perfil detallada.</p>
           </div>
         ) : (
+          // Render profile data
           <div className="bg-white shadow-md rounded-lg p-6">
             <div className="mb-4">
               <h2 className="text-xl font-semibold mb-2">Información Personal</h2>
@@ -84,14 +83,15 @@ export default function ProfilePage() {
               </div>
             )}
 
+            {/* Edit button or other actions could be added here */}
+            {/* Example: Link to an edit page */}
+            {/* 
             <div className="mt-6">
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
-              >
-                Actualizar Información
-              </button>
+              <Link href="/profile/edit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Editar Perfil
+              </Link>
             </div>
+            */}
           </div>
         )}
       </div>
