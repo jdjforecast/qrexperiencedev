@@ -1,98 +1,115 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/components/auth/AuthProvider"
+import { useRouter, useSearchParams } from "next/navigation"
+import { signIn } from "next-auth/react"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+
+// Define el esquema de validación
+const loginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnUrl = searchParams.get("returnUrl") || "/dashboard"
-  
-  // Get login function from auth context
-  const { signIn, user } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Redirect if already logged in
-  if (user) {
-    router.push(returnUrl)
-    return null
-  }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true)
+    setError(null)
 
     try {
-      const result = await signIn(email, password)
-      
-      if (result.success) {
-        router.push(returnUrl)
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Credenciales inválidas")
+        return
       }
-    } catch (error) {
-      console.error("Login error:", error)
+
+      router.push(returnUrl)
+    } catch (err) {
+      console.error("Error de inicio de sesión:", err)
+      setError("Ocurrió un error al iniciar sesión. Inténtalo de nuevo.")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-150px)] flex-col items-center justify-center py-12">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900">Iniciar sesión</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            ¿No tienes una cuenta?{" "}
-            <Link href="/register" className="font-medium text-azul-claro hover:text-azul-oscuro">
-              Regístrate
-            </Link>
-          </p>
+    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div>
+          <h1 className="text-center text-3xl font-bold">QR Experience</h1>
+          <h2 className="mt-6 text-center text-2xl font-bold tracking-tight">
+            Iniciar sesión
+          </h2>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="-space-y-px rounded-md shadow-sm">
+
+        {error && (
+          <div className="rounded-md bg-red-50 p-4">
+            <div className="text-sm text-red-700">{error}</div>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-4 rounded-md shadow-sm">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Correo electrónico
+              <label htmlFor="email" className="block text-sm font-medium">
+                Email
               </label>
               <input
                 id="email"
-                name="email"
                 type="email"
-                required
-                className="relative block w-full rounded-t-md border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-azul-claro"
-                placeholder="Correo electrónico"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               />
+              {errors.email && (
+                <span className="text-xs text-red-600">
+                  {errors.email.message}
+                </span>
+              )}
             </div>
+
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium">
                 Contraseña
               </label>
               <input
                 id="password"
-                name="password"
                 type="password"
-                required
-                className="relative block w-full rounded-b-md border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-azul-claro"
-                placeholder="Contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register("password")}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <Link
-                href="/auth/forgot-password"
-                className="font-medium text-azul-claro hover:text-azul-oscuro"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
+              {errors.password && (
+                <span className="text-xs text-red-600">
+                  {errors.password.message}
+                </span>
+              )}
             </div>
           </div>
 
@@ -100,10 +117,29 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative flex w-full justify-center rounded-md bg-azul-oscuro px-3 py-3 text-sm font-semibold text-white hover:bg-azul-claro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azul-claro disabled:opacity-70"
+              className="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70"
             >
               {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
             </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <Link
+                href="/register"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                ¿No tienes una cuenta? Regístrate
+              </Link>
+            </div>
+            <div className="text-sm">
+              <Link
+                href="/auth/forgot-password"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
           </div>
         </form>
       </div>
