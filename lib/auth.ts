@@ -4,32 +4,9 @@
  * Este archivo contiene todas las funciones relacionadas con la autenticación,
  * autorización y gestión de perfiles de usuario.
  */
-import { cookies } from 'next/headers'; // Import cookies
-import { createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr'; // Import from ssr
 import { createBrowserClient } from "@/lib/supabase-client"
 import type { User } from '@supabase/supabase-js'; // Import User type
-
-// Helper to create server client (avoids repeating cookie logic)
-export async function createServerClient(options?: { admin?: boolean }) {
-  const cookieStore = await cookies(); // Await the cookies
-  return createSupabaseServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    options?.admin ? process.env.SUPABASE_SERVICE_ROLE_KEY! : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          cookieStore.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
-}
+import { createServerClient as createServerClientFromLib } from '@/lib/supabase/server'; 
 
 // Define a type for the profile data
 interface ProfileData {
@@ -45,9 +22,9 @@ interface ProfileData {
  * Obtiene el usuario actual desde el servidor
  * @returns El usuario actual o null si no hay sesión
  */
-export async function getCurrentUser(): Promise<User | null> { // Added return type
+export async function getCurrentUser(): Promise<User | null> {
   try {
-    const supabase = await createServerClient(); // Added await
+    const supabase = await createServerClientFromLib();
     const { data, error } = await supabase.auth.getSession();
 
     if (error) {
@@ -76,7 +53,7 @@ export async function getCurrentUser(): Promise<User | null> { // Added return t
  * @param userId ID del usuario
  * @returns Perfil del usuario o null si no existe
  */
-export async function getUserProfile(userId: string): Promise<ProfileData | null> { // Added return type
+export async function getUserProfile(userId: string): Promise<ProfileData | null> {
   let profileToReturn: ProfileData | null = null; // Initialize return value
   try {
     if (!userId) {
@@ -85,7 +62,7 @@ export async function getUserProfile(userId: string): Promise<ProfileData | null
     }
 
     // Use the server client with admin privileges
-    const supabase = await createServerClient({ admin: true }); // Added await
+    const supabase = await createServerClientFromLib({ admin: true });
 
     // Check if the profile exists first
     const { data: existingProfile, error: checkError } = await supabase
@@ -191,7 +168,7 @@ export async function registerUser(
   companyName: string = ""
 ): Promise<RegisterResult> { // Added return type
   try {
-    const supabase = await createServerClient(); // Added await
+    const supabase = await createServerClientFromLib();
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"; // Default to localhost for dev
 
