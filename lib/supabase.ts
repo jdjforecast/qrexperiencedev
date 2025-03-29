@@ -32,6 +32,16 @@ export function getSupabase() {
   return sharedClient
 }
 
+// Cliente para uso en el navegador
+export function getBrowserClient() {
+  return getSupabase()
+}
+
+// Para mantener compatibilidad con el código existente
+export function createServerClient(options?: { admin?: boolean }) {
+  return createSupabaseClient(options)
+}
+
 // Cliente para acceso en API routes y Server Actions con permisos de admin
 export function getAdminSupabase() {
   return createSupabaseClient({ admin: true })
