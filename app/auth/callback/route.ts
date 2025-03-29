@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase-client"
+import { createSupabaseClient } from "@/lib/supabase/index"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     }
 
     // Procesar el código de autenticación
-    const supabase = createServerClient()
+    const supabase = createSupabaseClient()
 
     // Intercambiar el código por una sesión
     const { error } = await supabase.auth.exchangeCodeForSession(code)

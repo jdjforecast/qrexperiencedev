@@ -67,4 +67,18 @@ export const OrdersArraySchema = z.array(OrderSchema);
 // Schema for the expected return from the handle_new_order RPC call
 export const CreateOrderRpcResultSchema = z.object({
   order_id: z.string().uuid(),
-}); 
+});
+
+// Esquema básico para datos de productos
+export const ProductDataSchema = z.object({
+  name: z.string().min(1, "El nombre es requerido"),
+  description: z.string().nullable().optional(),
+  price: z.number().positive("El precio debe ser mayor que 0"),
+  image_url: z.string().nullable().optional(),
+  stock: z.number().int().nonnegative().default(0),
+  code: z.string().min(3).optional(),
+  urlpage: z.string().optional(),
+});
+
+// Re-exportar el tipo
+export type ProductData = z.infer<typeof ProductDataSchema>; 

@@ -2,30 +2,30 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase-client"
+import { createSupabaseClient } from "@/lib/supabase/index"
 import { addProductToCartFromQR } from "@/lib/cart-service"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const { id } = params
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const [product, setProduct] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   useEffect(() => {
     async function loadProduct() {
-      if (loading) return
+      if (authLoading) return
 
       // Redirigir al login si no hay usuario
       if (!user) {
-        router.push(`/login?redirect=/product/${id}`)
+        router.push(`/login?returnUrl=/product/${id}`)
         return
       }
 
       try {
-        const supabase = createClient()
+        const supabase = createSupabaseClient()
         const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
 
         if (error || !data) {
@@ -42,7 +42,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     }
 
     loadProduct()
-  }, [id, user, loading, router])
+  }, [id, user, authLoading, router])
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -60,7 +60,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     }
   }
 
-  if (loading || isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -71,7 +71,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     )
   }
 
-  if (!product && !loading) {
+  if (!product && !authLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="rounded-lg bg-red-100 p-4 text-center text-red-700">

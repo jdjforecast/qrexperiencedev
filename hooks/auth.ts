@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getSupabaseClient } from "@/lib/supabase/client"
+import { createSupabaseClient } from "@/lib/supabase/index"
 import type { User } from "@supabase/supabase-js"
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = getSupabaseClient()
+  const supabase = createSupabaseClient()
 
   useEffect(() => {
     // Obtener sesión inicial

@@ -1,7 +1,7 @@
-import { createServerClient } from "@/lib/supabase-client"
+import { createSupabaseClient } from "@/lib/supabase/index"
 
 export default async function DatabaseAnalysisPage() {
-  const supabase = createServerClient({ admin: true })
+  const supabase = createSupabaseClient({ admin: true })
 
   // Ejecutar la función de análisis
   const { data: consistencyData, error: consistencyError } = await supabase.rpc("check_user_consistency")

@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getProducts, createProduct, updateProduct, deleteProduct } from "@/lib/products"
-import type { Product } from "@/lib/database.types"
+import { getAllProducts, createProduct, updateProduct, deleteProduct, type Product } from "@/lib/products"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
 import AdminLayout from "@/components/admin-layout"
@@ -32,7 +31,7 @@ export default function CatalogPage() {
   async function loadProducts() {
     try {
       setLoading(true)
-      const data = await getProducts()
+      const data = await getAllProducts()
       setProducts(data)
     } catch (error) {
       console.error("Error loading products:", error)
@@ -55,12 +54,18 @@ export default function CatalogPage() {
         throw new Error("El precio debe ser un número válido")
       }
 
-      await createProduct({
+      const result = await createProduct({
         name: newProduct.name,
         description: newProduct.description,
         price,
         image_url: newProduct.image_url || null,
+        stock: 0,
+        code: Math.random().toString(36).substring(2, 8).toUpperCase(), // Código aleatorio simple
       })
+
+      if (!result.success) {
+        throw new Error(result.error || "Error al crear el producto")
+      }
 
       setNewProduct({
         name: "",
@@ -79,7 +84,9 @@ export default function CatalogPage() {
       console.error("Error creating product:", error)
       toast({
         title: "Error",
-        description: "No se pudo crear el producto",
+        description: typeof error === 'object' && error !== null && 'message' in error 
+          ? String(error.message) 
+          : "No se pudo crear el producto",
         variant: "destructive",
       })
     } finally {
@@ -98,13 +105,16 @@ export default function CatalogPage() {
         throw new Error("El precio debe ser un número válido")
       }
 
-      await updateProduct({
-        id: editingProduct.id,
+      const result = await updateProduct(editingProduct.id, {
         name: editingProduct.name,
         description: editingProduct.description,
         price,
         image_url: editingProduct.image_url || null,
       })
+
+      if (!result.success) {
+        throw new Error(result.error || "Error al actualizar el producto")
+      }
 
       setEditingProduct(null)
       toast({
@@ -117,7 +127,9 @@ export default function CatalogPage() {
       console.error("Error updating product:", error)
       toast({
         title: "Error",
-        description: "No se pudo actualizar el producto",
+        description: typeof error === 'object' && error !== null && 'message' in error 
+          ? String(error.message) 
+          : "No se pudo actualizar el producto",
         variant: "destructive",
       })
     } finally {
@@ -130,7 +142,12 @@ export default function CatalogPage() {
 
     try {
       setLoading(true)
-      await deleteProduct(id)
+      const result = await deleteProduct(id)
+      
+      if (!result.success) {
+        throw new Error(result.error || "Error al eliminar el producto")
+      }
+      
       toast({
         title: "Éxito",
         description: "Producto eliminado correctamente",
@@ -140,7 +157,9 @@ export default function CatalogPage() {
       console.error("Error deleting product:", error)
       toast({
         title: "Error",
-        description: "No se pudo eliminar el producto",
+        description: typeof error === 'object' && error !== null && 'message' in error 
+          ? String(error.message) 
+          : "No se pudo eliminar el producto",
         variant: "destructive",
       })
     } finally {

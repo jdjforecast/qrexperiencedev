@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useDataLoader } from "@/hooks/use-data-loader"
-import { getProducts } from "@/lib/products"
+import { getAllProducts, type Product as ProductType } from "@/lib/products"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -14,14 +14,7 @@ import { toast } from "@/components/ui/use-toast"
 /**
  * Interfaz para los productos
  */
-interface Product {
-  id: string
-  name: string
-  price: number
-  category?: string
-  image_url?: string
-  sku?: string
-}
+type Product = ProductType;
 
 /**
  * Props para el componente ProductSelector
@@ -71,15 +64,14 @@ export function ProductSelector({
 
   // Función para cargar productos con filtrado opcional por categoría
   const fetchProducts = useCallback(async () => {
-    const { data } = await getProducts()
-    if (!data) return []
-
+    const products = await getAllProducts()
+    
     // Si hay una categoría especificada, filtramos por esa categoría
     if (category) {
-      return data.filter((product: Product) => product.category === category)
+      return products.filter((product: Product) => product.category === category)
     }
 
-    return data
+    return products
   }, [category])
 
   // Callbacks para eventos del hook
