@@ -5,18 +5,23 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "@/lib/auth"
+import { signIn } from "@/lib/auth/client"
 import { useAuth } from "@/contexts/auth-context"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/components/ui/use-toast"
+import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnUrl = searchParams?.get("returnUrl") || "/dashboard"
   const { refreshUser } = useAuth()
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,7 +33,7 @@ export default function LoginPage() {
 
     try {
       setIsLoading(true)
-      setError("")
+      setError(null)
 
       console.log("Iniciando proceso de login...")
 
@@ -38,6 +43,11 @@ export default function LoginPage() {
 
       if (!result.success) {
         setError(result.message)
+        toast({
+          title: "Error de inicio de sesión",
+          description: result.message,
+          variant: "destructive",
+        })
         return
       }
 
@@ -48,13 +58,25 @@ export default function LoginPage() {
 
       console.log("Información del usuario actualizada, redirigiendo a:", returnUrl)
 
+      toast({
+        title: "Inicio de sesión exitoso",
+        description: "Redirigiendo...",
+        variant: "default",
+      })
+
       // Pequeño retraso para asegurar que la sesión se establezca completamente
       setTimeout(() => {
         router.replace(returnUrl)
+        router.refresh()
       }, 500)
     } catch (err) {
       console.error("Error en el proceso de login:", err)
       setError("Error al iniciar sesión. Por favor, intenta de nuevo.")
+      toast({
+        title: "Error de inicio de sesión",
+        description: "Error al iniciar sesión. Por favor, intenta de nuevo.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }

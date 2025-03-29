@@ -236,73 +236,8 @@ export async function registerUser(
 }
 
 /**
- * Inicia sesión con email y contraseña
- * @param email Email del usuario
- * @param password Contraseña del usuario
- * @returns Resultado del inicio de sesión
- */
-interface SignInResult {
-    success: boolean;
-    user?: User | null;
-    session?: any | null; // Consider using Session type from supabase-js
-    message: string;
-}
-export async function signIn(email: string, password: string): Promise<SignInResult> { // Added return type
-  try {
-    // Use the client-side client for sign-in
-    const supabase = createBrowserClient();
-
-    console.log("Iniciando sesión con Supabase...");
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      console.error("Error de Supabase al iniciar sesión:", error);
-      // Map common errors to user-friendly messages
-      if (error.message === 'Invalid login credentials') {
-        return { success: false, message: "Credenciales de inicio de sesión inválidas." };
-      }
-      if (error.message.includes('Email not confirmed')) {
-         return { success: false, message: "Por favor, confirma tu correo electrónico antes de iniciar sesión." };
-      }
-      // Generic error for others
-      return { success: false, message: `Error al iniciar sesión: ${error.message}` };
-    }
-
-    if (!data.session || !data.user) {
-        console.error("Error de inicio de sesión: No se recibió sesión o usuario de Supabase.");
-        return { success: false, message: "Error inesperado durante el inicio de sesión." };
-    }
-
-    console.log("Sesión establecida correctamente:", data.session?.user?.email);
-
-    // Optional: Trigger profile check/creation via AuthProvider or similar mechanism
-    // rather than directly in signIn
-
-    return {
-        success: true,
-        user: data.user,
-        session: data.session,
-        message: "Inicio de sesión exitoso."
-    };
-
-  } catch (error) {
-     let message = "Error desconocido durante el inicio de sesión.";
-     if (error instanceof Error) {
-         message = error.message;
-     }
-     console.error("Error en signIn:", error);
-     return {
-       success: false,
-       message: message,
-     };
-  }
-}
-
-/**
- * Cierra la sesión del usuario actual (en el navegador)
+ * Cierra la sesión del usuario actual
+ * @returns Resultado del cierre de sesión
  */
 interface SignOutResult {
     success: boolean;
