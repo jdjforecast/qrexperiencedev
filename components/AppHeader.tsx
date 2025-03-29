@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NestleLogo } from "@/components/ui/nestle-logo"
 import { PharmaSummitLogo } from "@/components/ui/pharma-summit-logo"
 import { useScanner } from "@/contexts/scanner-context"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 import { useToast } from "@/components/ui/use-toast"
 
 /**

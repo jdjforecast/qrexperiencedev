@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 import Link from "next/link"
 import Image from "next/image"
 import QrScannerFab from "@/components/qr-scanner/qr-scanner-fab"

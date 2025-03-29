@@ -5,15 +5,9 @@ export function createClientClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  })
+  return createClient<Database>(supabaseUrl, supabaseAnonKey)
 }
 
-export const supabase = createClientClient()
+export const supabaseClient = createClientClient()
 
-export default supabase 
+export default supabaseClient 

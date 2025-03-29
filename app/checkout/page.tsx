@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 import { getUserCart } from "@/lib/cart"
 import { createOrder } from "@/lib/orders"
 import RouteGuard from "@/components/auth/route-guard"

@@ -4,75 +4,26 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { createBrowserClient } from "@/lib/supabase-client"
+import { supabaseClient } from "@/lib/supabase/client-utils"
 
 export default function FixRLSPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
 
-  const runMigration = async () => {
+  const handleFixRLS = async () => {
     setIsLoading(true)
     setResult(null)
 
     try {
-      const supabase = createBrowserClient()
-
       // Ejecutar la migración SQL directamente
-      const { error } = await supabase.rpc("run_sql", {
-        sql: `
-          -- Asegurarse de que RLS está habilitado para la tabla profiles
-          ALTER TABLE IF EXISTS profiles ENABLE ROW LEVEL SECURITY;
-
-          -- Eliminar políticas existentes que puedan estar causando conflictos
-          DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
-          DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
-          DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
-          DROP POLICY IF EXISTS "Admin users can view all profiles" ON profiles;
-          DROP POLICY IF EXISTS "Admin users can update all profiles" ON profiles;
-          DROP POLICY IF EXISTS "Admin users can insert all profiles" ON profiles;
-          DROP POLICY IF EXISTS "Service role can manage all profiles" ON profiles;
-
-          -- Crear nuevas políticas más permisivas para la tabla profiles
-          CREATE POLICY "Users can view their own profile" ON profiles
-              FOR SELECT USING (auth.uid() = id);
-
-          CREATE POLICY "Users can update their own profile" ON profiles
-              FOR UPDATE USING (auth.uid() = id);
-
-          CREATE POLICY "Users can insert their own profile" ON profiles
-              FOR INSERT WITH CHECK (auth.uid() = id);
-
-          CREATE POLICY "Admin users can view all profiles" ON profiles
-              FOR SELECT USING (
-                  EXISTS (
-                      SELECT 1 FROM profiles
-                      WHERE id = auth.uid() AND role = 'admin'
-                  )
-              );
-
-          CREATE POLICY "Admin users can update all profiles" ON profiles
-              FOR UPDATE USING (
-                  EXISTS (
-                      SELECT 1 FROM profiles
-                      WHERE id = auth.uid() AND role = 'admin'
-                  )
-              );
-
-          CREATE POLICY "Admin users can insert all profiles" ON profiles
-              FOR INSERT WITH CHECK (
-                  EXISTS (
-                      SELECT 1 FROM profiles
-                      WHERE id = auth.uid() AND role = 'admin'
-                  )
-              );
-
-          CREATE POLICY "Service role can manage all profiles" ON profiles
-              FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
-        `,
-      })
+      const { error } = await supabaseClient.rpc('fix_rls')
 
       if (error) {
-        throw new Error(`Error al ejecutar la migración: ${error.message}`)
+        setResult({
+          success: false,
+          message: error.message || "Error fixing RLS",
+        })
+        return
       }
 
       setResult({
@@ -80,10 +31,10 @@ export default function FixRLSPage() {
         message: "Políticas RLS actualizadas correctamente. Ahora deberías poder iniciar sesión sin problemas.",
       })
     } catch (error) {
-      console.error("Error al ejecutar la migración:", error)
+      console.error("Error fixing RLS:", error)
       setResult({
         success: false,
-        message: error.message || "Error al ejecutar la migración",
+        message: error.message || "Error fixing RLS",
       })
     } finally {
       setIsLoading(false)
@@ -114,7 +65,7 @@ export default function FixRLSPage() {
           )}
         </CardContent>
         <CardFooter>
-          <Button onClick={runMigration} disabled={isLoading} className="w-full">
+          <Button onClick={handleFixRLS} disabled={isLoading} className="w-full">
             {isLoading ? "Ejecutando..." : "Corregir Políticas RLS"}
           </Button>
         </CardFooter>

@@ -2,24 +2,28 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createBrowserClient } from "@/lib/supabase-client"
+import { supabaseClient } from "@/lib/supabase/client-utils"
 import DashboardLayout from "@/components/dashboard/DashboardLayout"
 import { getUserProfile } from "@/lib/user-service"
+import { useAuth } from "@/components/auth/AuthProvider"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     async function loadUserData() {
       try {
-        const supabase = createBrowserClient()
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
+        const { data: { session } } = await supabaseClient.auth.getSession()
 
         if (!session) {
           router.push("/login")
@@ -29,12 +33,8 @@ export default function DashboardPage() {
         const userProfile = await getUserProfile(session.user.id)
         setUserData(userProfile)
       } catch (error) {
-        console.error("Error al cargar datos del usuario:", error)
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los datos del usuario",
-          variant: "destructive",
-        })
+        console.error("Error loading user data:", error)
+        setError("Error loading user data")
       } finally {
         setLoading(false)
       }

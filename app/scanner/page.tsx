@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/AppHeader"
 import { AppFooter } from "@/components/AppFooter"
 import { useScanner } from "@/contexts/scanner-context"
 import { QrCode, AlertCircle, Camera, KeyRound } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 type BrowserSupportStatus = {
   supported: boolean

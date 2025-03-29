@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 import RouteGuard from "@/components/auth/route-guard"
 import { getProductByCode } from "@/lib/products"
 import { addToCart } from "@/lib/cart"
@@ -32,8 +32,8 @@ export default function ScanPage() {
       // Obtener producto por código
       const productResult = await getProductByCode(productCode)
 
-      if (!productResult.success) {
-        setError(productResult.error || "Producto no encontrado")
+      if (!productResult?.success || !productResult?.data) {
+        setError(productResult?.error || "Producto no encontrado")
         return
       }
 
@@ -58,7 +58,7 @@ export default function ScanPage() {
   }
 
   return (
-    <RouteGuard requireAuth>
+    <RouteGuard>
       <div className="container mx-auto px-4 py-8">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">Escanear Código</h1>
 

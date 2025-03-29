@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { LogOut, Home, ShoppingCart, User, Settings } from "lucide-react"
-import { createBrowserClient } from "@/lib/supabase-client"
+import { supabaseClient } from "@/lib/supabase/client-utils"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -17,14 +17,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleSignOut = async () => {
     try {
-      const supabase = createBrowserClient()
-      await supabase.auth.signOut()
+      await supabaseClient.auth.signOut()
       router.push("/login")
+      toast({
+        title: "Success",
+        description: "You have been signed out",
+        variant: "default",
+      })
     } catch (error) {
-      console.error("Error al cerrar sesión:", error)
+      console.error("Error signing out:", error)
       toast({
         title: "Error",
-        description: "No se pudo cerrar sesión correctamente",
+        description: "There was a problem signing out",
         variant: "destructive",
       })
     }

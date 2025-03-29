@@ -6,7 +6,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { registerUser } from "@/lib/auth/client"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("")

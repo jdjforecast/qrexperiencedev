@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 import { getProductByCode } from "@/lib/products"
 import { addToCart } from "@/lib/cart"
 import RouteGuard from "@/components/auth/route-guard"

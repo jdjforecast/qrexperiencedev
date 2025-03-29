@@ -1,23 +1,39 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
-import { createSupabaseClient, PUBLIC_ROUTES, ADMIN_ROUTES } from "@/lib/supabase/index";
+import { User, Session, AuthChangeEvent, SupabaseClient } from "@supabase/supabase-js";
+import { getBrowserClient } from "@/lib/supabase";
+import { ROUTES } from "@/lib/routes";
+// Import NextAuth functions and hook from our client wrapper
+import { 
+  signIn as nextAuthSignIn, 
+  signOut as nextAuthSignOut, 
+  useAuth as useAppAuth 
+} from "@/lib/auth/client";
+// Import server function to get profile (assuming it uses Supabase admin client internally)
+import { getUserProfile } from "@/lib/auth"; 
 
-// Cliente de Supabase para el navegador
-const supabase = createSupabaseClient();
+// Define public routes based on the ROUTES object
+const PUBLIC_ROUTE_VALUES: string[] = [
+  ROUTES.HOME,
+  ROUTES.LOGIN,
+  ROUTES.REGISTER,
+  ROUTES.PRODUCTS,
+  // Need a way to match dynamic product routes, regex might be better
+  // For now, let's assume /products/* is public
+];
+
+// Define admin routes based on the ROUTES object
+const ADMIN_ROUTE_PREFIX = ROUTES.ADMIN.DASHBOARD; // "/admin"
 
 function isPublicRoute(path: string): boolean {
-  return PUBLIC_ROUTES.some((route: string) => 
-    path === route || path.startsWith(`${route}/`)
-  );
+  if (path.startsWith(ROUTES.PRODUCTS + '/')) return true; // Treat all /products/... as public
+  return PUBLIC_ROUTE_VALUES.includes(path);
 }
 
 function isAdminRoute(path: string): boolean {
-  return ADMIN_ROUTES.some((route: string) => 
-    path === route || path.startsWith(`${route}/`)
-  );
+  return path.startsWith(ADMIN_ROUTE_PREFIX);
 }
 
 interface ProfileData {
@@ -29,187 +45,193 @@ interface ProfileData {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: any | null; // Using any to accommodate the combined user data
   profile: ProfileData | null;
-  isLoading: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
+  error: string | null;
+  isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  signOut: () => Promise<{ success: boolean; message: string }>;
+  refreshUser: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const supabase = useMemo(() => getBrowserClient(), []);
   const router = useRouter();
   const pathname = usePathname();
 
-  // Función para obtener los datos del perfil
-  const fetchProfile = async (userId: string) => {
+  // Use our custom hook that wraps NextAuth's useSession
+  const { session, status: nextAuthStatus, isLoading: nextAuthHookIsLoading } = useAppAuth();
+  const nextAuthIsLoading = nextAuthHookIsLoading || nextAuthStatus === 'loading';
+  const userId = session?.user?.id; // Assuming NextAuth session.user has the Supabase ID
+
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  // Combined loading state: true if either NextAuth or profile fetch is loading
+  const [isProfileLoading, setIsProfileLoading] = useState<boolean>(true);
+  const isLoading = nextAuthIsLoading || isProfileLoading;
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch Supabase profile based on NextAuth user ID
+  const fetchProfile = async (currentUserId: string): Promise<ProfileData | null> => {
+    if (!currentUserId) return null;
+    setIsProfileLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      
-      if (error) {
-        console.error("Error fetching profile:", error);
-        return null;
+      console.log(`AuthProvider: Fetching Supabase profile for user ID: ${currentUserId}`);
+      // Use the server function getUserProfile (needs Supabase Admin client internally)
+      const profileData = await getUserProfile(currentUserId);
+      console.log("AuthProvider: Fetched profile data:", profileData);
+      if (!profileData) {
+          console.warn(`AuthProvider: No profile found for user ${currentUserId}`);
+          // Optionally create a default profile here if needed, or handle missing profile downstream
       }
-      
-      return data as ProfileData;
-    } catch (error) {
-      console.error("Profile fetch error:", error);
+      return profileData as ProfileData;
+    } catch (err) {
+      console.error("AuthProvider: Profile fetch error:", err);
+      setError("Error al cargar el perfil del usuario.");
       return null;
+    } finally {
+      setIsProfileLoading(false);
     }
   };
 
-  // Inicializar estado de autenticación
+  // Effect to fetch profile when NextAuth session is available/changes
   useEffect(() => {
-    const initAuth = async () => {
-      setIsLoading(true);
-      try {
-        // Obtener sesión inicial
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          setUser(session.user);
-          const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
-        }
-        
-        // Configurar listener para cambios en la autenticación
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event: AuthChangeEvent, session: Session | null) => {
-            if (session?.user) {
-              setUser(session.user);
-              const profileData = await fetchProfile(session.user.id);
-              setProfile(profileData);
-            } else {
-              setUser(null);
-              setProfile(null);
-            }
-            
-            // Force refresh
-            router.refresh();
-          }
-        );
-        
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    initAuth();
-  }, [router]);
-
-  // Protección de rutas
-  useEffect(() => {
-    if (isLoading) return;
-
-    // Si no está autenticado y la ruta no es pública, redirigir a login
-    if (!user && !isPublicRoute(pathname)) {
-      router.push(`/login?returnUrl=${encodeURIComponent(pathname)}`);
-      return;
-    }
-
-    // Si es una ruta de admin y no es admin, redirigir a dashboard
-    if (user && isAdminRoute(pathname) && profile?.role !== "admin") {
-      router.push("/dashboard");
-      return;
-    }
-
-    // Si está autenticado e intenta acceder a login/register, redirigir a dashboard
-    if (user && (pathname === "/login" || pathname === "/register")) {
-      router.push("/dashboard");
-    }
-  }, [user, profile, pathname, isLoading, router]);
-
-  // Iniciar sesión
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+    if (userId) {
+      fetchProfile(userId).then(fetchedProfile => {
+        setProfile(fetchedProfile);
+        setIsAdmin(fetchedProfile?.role === "admin");
       });
+    } else if (!nextAuthIsLoading) {
+      // If NextAuth is not loading and there's no userId, clear profile
+      setProfile(null);
+      setIsAdmin(false);
+      setIsProfileLoading(false); // Ensure loading stops if no user
+    }
+    // Dependencies: userId derived from NextAuth session, and nextAuthIsLoading status
+  }, [userId, nextAuthIsLoading]);
 
-      if (error) {
-        return { success: false, message: error.message };
-      }
+  // Effect for route protection
+  useEffect(() => {
+    if (isLoading) return; // Wait until both NextAuth and profile loading are done
 
-      if (data.user) {
-        const profileData = await fetchProfile(data.user.id);
-        setProfile(profileData);
+    const isAuthenticated = !!userId;
+    const currentIsAdmin = profile?.role === "admin";
+
+    if (!isAuthenticated && !isPublicRoute(pathname)) {
+      console.log(`AuthProvider: Not authenticated, redirecting from ${pathname} to login`);
+      router.push(`${ROUTES.LOGIN}?returnUrl=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    if (isAuthenticated && isAdminRoute(pathname) && !currentIsAdmin) {
+      console.log(`AuthProvider: Authenticated but not admin, redirecting from ${pathname} to dashboard`);
+      router.push(ROUTES.PROFILE); // Redirect non-admins from admin routes
+      return;
+    }
+
+    if (isAuthenticated && (pathname === ROUTES.LOGIN || pathname === ROUTES.REGISTER)) {
+      console.log(`AuthProvider: Authenticated, redirecting from ${pathname} to dashboard`);
+      router.push(ROUTES.PROFILE); // Redirect logged-in users from login/register
+    }
+  }, [userId, profile, pathname, isLoading, router]); // Depends on combined isLoading
+
+  // SignIn using NextAuth
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
+    console.log("AuthProvider: Attempting sign in via NextAuth...");
+    try {
+      const result = await nextAuthSignIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
+      
+      console.log("AuthProvider: NextAuth signIn result:", result);
+
+      if (result?.ok) {
         return { success: true, message: "Inicio de sesión exitoso" };
       } else {
-        return { success: false, message: "No se pudo obtener la información del usuario" };
+        return { success: false, message: result?.error || "Error al iniciar sesión" };
       }
-    } catch (error) {
-      let message = "Error desconocido al iniciar sesión";
-      if (error instanceof Error) message = error.message;
-      return { success: false, message };
+    } catch (err) {
+      console.error("AuthProvider: NextAuth sign in error:", err);
+      return { success: false, message: "Error al iniciar sesión" };
     }
-  };
+  }
 
-  // Cerrar sesión
-  const signOut = async () => {
+  // SignOut using NextAuth
+  const signOut = async (): Promise<{ success: boolean; message: string }> => {
+    console.log("AuthProvider: Attempting sign out via NextAuth...");
     try {
-      await supabase.auth.signOut();
-      setUser(null);
+      await nextAuthSignOut({ redirect: false });
+      // Clear local state immediately
       setProfile(null);
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
+      setIsAdmin(false);
+      return { success: true, message: "Sesión cerrada exitosamente" };
+    } catch (err) {
+      console.error("AuthProvider: NextAuth sign out error:", err);
+      return { success: false, message: "Error al cerrar sesión" };
+    }
+  }
+
+  // Function to manually refresh profile (renamed from refreshProfile to refreshUser)
+  const refreshUser = async () => {
+    if (userId) {
+      const fetchedProfile = await fetchProfile(userId);
+      setProfile(fetchedProfile);
+      setIsAdmin(fetchedProfile?.role === "admin");
+    } else {
+      console.log("AuthProvider: Cannot refresh profile, no user ID available.");
     }
   };
 
-  // Refrescar datos del perfil
-  const refreshProfile = async () => {
-    if (user) {
-      const profileData = await fetchProfile(user.id);
-      setProfile(profileData);
+  // Function to refresh session
+  const refreshSession = async () => {
+    try {
+      await refreshUser();
+    } catch (err) {
+      console.error("AuthProvider: Error refreshing session:", err);
+      setError("Error al actualizar la sesión");
     }
   };
 
-  const isAdmin = profile?.role === "admin";
-  
-  const value = {
-    user,
+  // Construct the user object for the context value
+  // Combine data from NextAuth session (like email) with Supabase profile
+  const contextUser = useMemo(() => {
+    if (!profile) return null;
+    return {
+      ...session?.user, // Include basic session info like email
+      ...profile, // Include all profile fields (id, role, full_name, etc.)
+      id: profile.id // Ensure Supabase profile ID overrides session ID if different
+    };
+  }, [session, profile]);
+
+  // Memoize the final context value
+  const value = useMemo(() => ({
+    user: contextUser,
     profile,
     isLoading,
     isAdmin,
+    error,
+    isAuthenticated: !!contextUser,
     signIn,
     signOut,
-    refreshProfile
-  };
+    refreshUser,
+    refreshSession
+  }), [contextUser, profile, isLoading, isAdmin, error, signIn, signOut, refreshUser, refreshSession]);
   
   return (
     <AuthContext.Provider value={value}>
-      {isLoading ? (
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-azul-claro"></div>
-            <p className="mt-2 text-lg text-gray-600">Cargando...</p>
-          </div>
-        </div>
-      ) : (
-        children
-      )}
+      {children}
     </AuthContext.Provider>
   );
 }
 
-// Custom hook para usar el contexto de autenticación
 export function useAuth() {
   const context = useContext(AuthContext);
   

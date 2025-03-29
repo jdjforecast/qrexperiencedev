@@ -1,4 +1,4 @@
-import { getBrowserClient } from "./supabase"
+import { getBrowserClient, createServerClient } from "./supabase"
 import type { User } from "@supabase/supabase-js"
 
 // Cache for the current session to reduce redundant checks
@@ -60,7 +60,7 @@ export async function getCurrentUser(): Promise<User | null> {
  */
 export async function getCurrentUserServer(): Promise<User | null> {
   try {
-    const supabase = getBrowserClient()
+    const supabase = createServerClient()
     const { data, error } = await supabase.auth.getSession()
 
     if (error) {

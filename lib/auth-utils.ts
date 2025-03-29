@@ -2,7 +2,7 @@
  * Utilidades para autenticación y manejo de roles
  */
 
-import { createBrowserClient, executeWithRetry } from "./supabase-client"
+import { getBrowserClient } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 
 /**
@@ -14,24 +14,19 @@ export async function isUserAdmin(user: User | null): Promise<boolean> {
   if (!user) return false
 
   try {
-    return await executeWithRetry(
-      async () => {
-        const supabase = createBrowserClient()
+    const supabase = getBrowserClient()
+    const { data, error } = await supabase
+      .from("profiles") 
+      .select("role") 
+      .eq("id", user.id)
+      .single()
 
-        // Verificar en la tabla de perfiles
-        const { data, error } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-
-        if (error) {
-          console.error("Error al verificar rol de administrador:", error)
-          return false
-        }
-
-        return data?.role === "admin"
-      },
-      3,
-      1000,
-      "Verificar rol de administrador",
-    )
+    if (error) {
+      if (error.code === 'PGRST116') return false; 
+      console.error("Error al verificar rol de administrador:", error)
+      return false
+    }
+    return data?.role === "admin"
   } catch (error) {
     console.error("Error al verificar rol de administrador:", error)
     return false
@@ -39,65 +34,88 @@ export async function isUserAdmin(user: User | null): Promise<boolean> {
 }
 
 /**
- * Verifica si el usuario actual tiene rol de administrador
+ * Verifica si el usuario actual (basado en la sesión del navegador) es administrador.
  * @returns Promise<boolean> true si el usuario actual es administrador
  */
 export async function isCurrentUserAdmin(): Promise<boolean> {
   try {
-    const supabase = createBrowserClient()
+    const supabase = getBrowserClient()
+    // Obtener el usuario de la sesión actual del cliente
+    const { data: { user }, error: sessionError } = await supabase.auth.getUser();
+    
+    if (sessionError || !user) {
+      console.error("Error getting current user or no user session:", sessionError);
+      return false;
+    }
 
-    return await executeWithRetry(
-      async () => {
-        // Obtener usuario actual
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser()
+    // Reutilizar la lógica de isUserAdmin
+    return await isUserAdmin(user);
 
-        if (error || !user) {
-          console.error("Error al obtener usuario actual:", error)
-          return false
-        }
-
-        return isUserAdmin(user)
-      },
-      3,
-      1000,
-      "Verificar si usuario actual es administrador",
-    )
   } catch (error) {
-    console.error("Error al verificar si usuario actual es administrador:", error)
-    return false
+    console.error("Error checking current user admin status:", error);
+    return false;
   }
 }
 
 /**
- * Obtiene el perfil completo del usuario
- * @param userId ID del usuario
- * @returns Perfil del usuario o null si no existe
+ * Obtiene el perfil del usuario actual (basado en la sesión del navegador).
+ * @returns Promise<any | null> Perfil del usuario o null si hay error o no está logueado.
  */
-export async function getUserProfile(userId: string) {
+export async function getCurrentUserProfile(): Promise<any | null> {
   try {
-    const supabase = createBrowserClient()
+    const supabase = getBrowserClient()
+    const { data: { user }, error: sessionError } = await supabase.auth.getUser();
+    
+    if (sessionError || !user) {
+      console.error("Error getting current user or no user session:", sessionError);
+      return null;
+    }
 
-    return await executeWithRetry(
-      async () => {
-        const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+    // Obtener perfil usando el ID del usuario de sesión
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
 
-        if (error) {
-          console.error("Error al obtener perfil de usuario:", error)
-          return null
-        }
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Profile not found is not an error here
+      console.error("Error fetching current user profile:", error);
+      return null;
+    }
+    return data;
 
-        return data
-      },
-      3,
-      1000,
-      "Obtener perfil de usuario",
-    )
   } catch (error) {
-    console.error("Error al obtener perfil de usuario:", error)
-    return null
+    console.error("Error getting current user profile:", error);
+    return null;
+  }
+}
+
+/**
+ * Obtiene el perfil de un usuario específico por su ID (llamada desde el cliente).
+ * @param userId ID del usuario
+ * @returns Promise<any | null> Perfil del usuario o null si hay error.
+ */
+export async function getUserProfile(userId: string): Promise<any | null> {
+  if (!userId) return null;
+  try {
+    const supabase = getBrowserClient()
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Profile not found
+      console.error(`Error fetching profile for user ${userId}:`, error);
+      return null;
+    }
+    return data;
+
+  } catch (error) {
+    console.error(`Error getting profile for user ${userId}:`, error);
+    return null;
   }
 }
 

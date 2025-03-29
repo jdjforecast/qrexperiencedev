@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Gauge, Package, QrCode, Users, ShoppingBag, LogOut, Menu, X, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/BackButton"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 import { LoadingFallback } from "@/components/ui/loading-fallback"
 
 export default function AdminLayout({

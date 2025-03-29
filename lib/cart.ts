@@ -1,9 +1,9 @@
-import { supabase } from "./supabase-client"
+import { supabaseClient } from "./supabase/client-utils"
 
 // Obtener el carrito del usuario actual
 export async function getUserCart(userId: string) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from("cart_items")
       .select(`
         id,
@@ -35,7 +35,7 @@ export async function getUserCart(userId: string) {
 export async function addToCart(userId: string, productId: string, quantity = 1) {
   try {
     // Verificar si el producto ya está en el carrito
-    const { data: existingItem, error: checkError } = await supabase
+    const { data: existingItem, error: checkError } = await supabaseClient
       .from("cart_items")
       .select("*")
       .eq("user_id", userId)
@@ -58,7 +58,7 @@ export async function addToCart(userId: string, productId: string, quantity = 1)
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("cart_items")
         .update({ quantity: existingItem.quantity + quantity })
         .eq("id", existingItem.id)
@@ -74,7 +74,7 @@ export async function addToCart(userId: string, productId: string, quantity = 1)
     }
 
     // Si el producto no está en el carrito, agregarlo
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from("cart_items")
       .insert({
         user_id: userId,
@@ -107,7 +107,7 @@ export async function updateCartItem(cartItemId: string, quantity: number) {
       }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from("cart_items")
       .update({ quantity })
       .eq("id", cartItemId)
@@ -129,7 +129,7 @@ export async function updateCartItem(cartItemId: string, quantity: number) {
 // Eliminar un producto del carrito
 export async function removeFromCart(cartItemId: string) {
   try {
-    const { error } = await supabase.from("cart_items").delete().eq("id", cartItemId)
+    const { error } = await supabaseClient.from("cart_items").delete().eq("id", cartItemId)
 
     if (error) {
       console.error("Error al eliminar del carrito:", error.message)
@@ -146,7 +146,7 @@ export async function removeFromCart(cartItemId: string) {
 // Vaciar el carrito completo
 export async function clearCart(userId: string) {
   try {
-    const { error } = await supabase.from("cart_items").delete().eq("user_id", userId)
+    const { error } = await supabaseClient.from("cart_items").delete().eq("user_id", userId)
 
     if (error) {
       console.error("Error al vaciar el carrito:", error.message)

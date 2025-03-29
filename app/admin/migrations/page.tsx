@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { createBrowserClient } from "@/lib/supabase-client"
+import { supabaseClient } from "@/lib/supabase/client-utils"
 import { Loader2, CheckCircle, AlertTriangle } from "lucide-react"
 import AdminLayout from "@/components/admin-layout"
 
@@ -12,47 +12,31 @@ export default function MigrationsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
 
-  const executeRemoveQRCodeMigration = async () => {
+  const runMigration = async () => {
     setIsLoading(true)
     setResult(null)
 
     try {
-      const supabase = createBrowserClient()
-
       // Check if the code column exists
-      const { data: columnExists, error: checkError } = await supabase.rpc("check_column_exists", {
-        table_name: "products",
-        column_name: "code",
-      })
+      const { error } = await supabaseClient.rpc('run_migration')
 
-      if (checkError) {
-        throw new Error(`Error checking column: ${checkError.message}`)
-      }
-
-      if (!columnExists) {
+      if (error) {
         setResult({
-          success: true,
-          message: 'La columna "code" ya ha sido eliminada o no existe.',
+          success: false,
+          message: error.message || "Error running migration",
         })
         return
       }
 
-      // Execute the migration to remove the code column
-      const { error: migrationError } = await supabase.rpc("remove_qr_code_column")
-
-      if (migrationError) {
-        throw new Error(`Error en la migración: ${migrationError.message}`)
-      }
-
       setResult({
         success: true,
-        message: 'La columna "code" ha sido eliminada exitosamente de la tabla "products".',
+        message: "Migration completed successfully",
       })
     } catch (error) {
-      console.error("Migration error:", error)
+      console.error("Error running migration:", error)
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : "Error desconocido al ejecutar la migración",
+        message: error.message || "Error running migration",
       })
     } finally {
       setIsLoading(false)
@@ -91,7 +75,7 @@ export default function MigrationsPage() {
             )}
           </CardContent>
           <CardFooter>
-            <Button onClick={executeRemoveQRCodeMigration} disabled={isLoading} variant="destructive">
+            <Button onClick={runMigration} disabled={isLoading} variant="destructive">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { getBrowserClient } from "@/lib/supabase"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 export function RoleVerifier() {
   const { user, isAdmin } = useAuth()

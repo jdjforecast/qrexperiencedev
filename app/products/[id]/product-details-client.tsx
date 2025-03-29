@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 import { addToCart } from "@/lib/cart"
 import LoadingSpinner from "@/components/ui/loading-spinner" // Assuming this exists
 

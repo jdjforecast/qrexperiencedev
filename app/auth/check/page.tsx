@@ -1,7 +1,7 @@
 "use client"
 
-import { useAuth } from "@/contexts/auth-context"
-import { createBrowserClient } from "@/lib/supabase-client"
+import { useAuth } from "@/components/auth/AuthProvider"
+import { supabaseClient } from "@/lib/supabase/client-utils"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -34,8 +34,7 @@ export default function CheckAuthPage() {
       )
 
       // Verificar directamente con Supabase
-      const supabase = createBrowserClient()
-      const { data, error } = await supabase.auth.getSession()
+      const { data, error } = await supabaseClient.auth.getSession()
 
       if (error) {
         setSupabaseStatus(`Error: ${error.message}`)
@@ -53,8 +52,7 @@ export default function CheckAuthPage() {
     setIsFixing(true)
     try {
       // 1. Refrescar el token si es posible
-      const supabase = createBrowserClient()
-      await supabase.auth.refreshSession()
+      await supabaseClient.auth.refreshSession()
 
       // 2. Forzar actualización del contexto
       await refreshUser()

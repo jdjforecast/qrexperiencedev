@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 // PublicRoutes are accessible to everyone
 const publicRoutes = ["/", "/login", "/register", "/auth/callback", "/auth/forgot-password", "/auth/update-password"]
