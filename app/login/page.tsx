@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -14,10 +14,10 @@ export default function LoginPage() {
   const returnUrl = searchParams.get("returnUrl") || "/dashboard"
   
   // Get login function from auth context
-  const { login, isAuthenticated } = useAuth()
+  const { signIn, user } = useAuth()
 
   // Redirect if already logged in
-  if (isAuthenticated) {
+  if (user) {
     router.push(returnUrl)
     return null
   }
@@ -27,7 +27,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const result = await login(email, password)
+      const result = await signIn(email, password)
       
       if (result.success) {
         router.push(returnUrl)

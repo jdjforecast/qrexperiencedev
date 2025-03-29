@@ -4,16 +4,16 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 export function Navbar() {
   const router = useRouter()
-  const { profile, isAuthenticated, isAdmin, logout } = useAuth()
+  const { profile, isAdmin, signOut } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const handleSignOut = async () => {
     try {
-      await logout()
+      await signOut()
     } catch (error) {
       console.error("Error signing out:", error)
     }
@@ -22,6 +22,8 @@ export function Navbar() {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
+
+  const isAuthenticated = !!profile
 
   return (
     <nav className="navbar">
