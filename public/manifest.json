@@ -1,0 +1,28 @@
+{
+  "name": "Mi Partner Nestlé",
+  "short_name": "Mi Partner",
+  "description": "Plataforma de gestión de partners de Nestlé",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0033A0",
+  "icons": [
+    {
+      "src": "/images/app-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/apple-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/images/favicon.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+
