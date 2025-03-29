@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createProduct, getAllProducts } from "@/lib/storage/products"
-import { getCurrentUser, isUserAdmin } from "@/lib/auth"
+import { getCurrentUser, isUserAdmin } from "@/lib/auth/server"
 import { NewProductSchema, ProductSchema } from "@/types/schemas"
 import type { Product } from "@/types/product"
 import { z } from "zod"

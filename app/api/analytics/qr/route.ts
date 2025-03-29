@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 // Remove the specific supabase-js import
 // import { createClient } from "@supabase/supabase-js"
 // Import the server client helper from lib/auth which handles cookies
-import { createServerClient, isUserAdmin } from "@/lib/auth"
+import { createServerClient, isUserAdmin } from "@/lib/auth/server"
 // Remove the import for the simpler server client
 // import { createServerClient as simpleServerClient } from "@/lib/supabase/server"
 

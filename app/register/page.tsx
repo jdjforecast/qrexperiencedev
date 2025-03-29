@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { registerUser } from "@/lib/auth"
+import { registerUser } from "@/lib/auth/client"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function RegisterPage() {

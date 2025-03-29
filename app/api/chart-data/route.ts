@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createServerClient, isUserAdmin } from "@/lib/auth"
+import { createServerClient, isUserAdmin } from "@/lib/auth/server"
 
 // Define a simple type for the chart data structure
 interface ChartData {

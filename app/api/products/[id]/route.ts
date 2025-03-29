@@ -2,7 +2,7 @@
  * API para obtener detalles de un producto por ID
  */
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient, isUserAdmin } from "@/lib/auth"
+import { createServerClient, isUserAdmin } from "@/lib/auth/server"
 // Adjust import: Use getProduct from service for GET
 import { getProduct } from "@/lib/product-service"
 import { updateProduct, deleteProduct, getProductById } from "@/lib/storage/products"

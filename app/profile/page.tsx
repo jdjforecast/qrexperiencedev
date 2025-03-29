@@ -1,4 +1,4 @@
-import { getCurrentUser, getUserProfile } from "@/lib/auth"
+import { getCurrentUser, getUserProfile } from "@/lib/auth/server"
 import RouteGuard from "@/components/auth/route-guard"
 import type { User } from '@supabase/supabase-js'; // Import User type for profile
 

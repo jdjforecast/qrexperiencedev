@@ -153,4 +153,89 @@ export async function updatePassword(newPassword: string): Promise<UpdatePasswor
   }
 }
 
+/**
+ * Registra un nuevo usuario (Client-Side)
+ * @param email Email del usuario
+ * @param password Contraseña del usuario
+ * @param fullName Nombre completo del usuario
+ * @param companyName Nombre de la empresa (opcional)
+ * @returns Resultado del registro
+ */
+interface RegisterResult {
+  success: boolean;
+  user?: User | null;
+  message: string;
+  error?: string;
+}
+
+export async function registerUser(
+  email: string,
+  password: string,
+  fullName: string,
+  companyName: string = ""
+): Promise<RegisterResult> {
+  try {
+    // Use browser client for client-side registration
+    const supabase = createBrowserClient();
+
+    const appUrl = window.location.origin || "http://localhost:3000";
+    const redirectUrl = `${appUrl}/auth/callback`;
+    console.log(`URL de redirección para activación: ${redirectUrl}`);
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: { full_name: fullName, company_name: companyName }
+      },
+    });
+
+    if (authError) {
+      if (authError.message.includes('User already registered')) {
+        return { success: false, error: "Este correo electrónico ya está registrado.", message: "Este correo electrónico ya está registrado." };
+      }
+      console.error("Error de Supabase al registrar:", authError);
+      return { success: false, error: authError.message, message: authError.message };
+    }
+
+    if (!authData.user) {
+      // Email confirmation pending
+      if (authData.session === null && !authData.user) {
+        console.log("Registro iniciado, esperando confirmación por correo electrónico.");
+        return {
+          success: true,
+          user: null,
+          message: "Usuario registrado. Por favor, verifica tu correo electrónico para activar tu cuenta."
+        };
+      }
+      
+      return { 
+        success: false, 
+        error: "No se pudo crear el usuario", 
+        message: "No se pudo crear el usuario" 
+      };
+    }
+
+    console.log(`Usuario ${authData.user.email} registrado. ID: ${authData.user.id}`);
+
+    return {
+      success: true,
+      user: authData.user,
+      message: "Usuario registrado correctamente. Por favor, verifica tu correo electrónico para activar tu cuenta.",
+    };
+  } catch (error) {
+    let message = "Error desconocido al registrar el usuario";
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    console.error("Error en registerUser:", error);
+    return {
+      success: false,
+      error: message,
+      message: message,
+    };
+  }
+}
+
 // Add other client-side auth functions here if needed (e.g., maybe a client-side signOut?) 

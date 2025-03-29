@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createServerClient, isUserAdmin } from "@/lib/auth" // Usar helpers de auth
+import { createServerClient, isUserAdmin } from "@/lib/auth/server" // Usar helpers de auth
 import { AdminOrdersArraySchema } from "@/types/schemas" // Importar schema Zod
 
 export async function GET(request: Request) {
