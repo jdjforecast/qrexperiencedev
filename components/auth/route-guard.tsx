@@ -1,51 +1,64 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
-import LoadingSpinner from "@/components/ui/loading-spinner"
+import { useAuth } from "@/lib/auth-context"
 
-interface RouteGuardProps {
-  children: React.ReactNode
-  requireAuth?: boolean
-  requireAdmin?: boolean
-}
+// PublicRoutes are accessible to everyone
+const publicRoutes = ["/", "/login", "/register", "/auth/callback", "/auth/forgot-password", "/auth/update-password"]
 
-export default function RouteGuard({ children, requireAuth = false, requireAdmin = false }: RouteGuardProps) {
-  const { user, isAdmin, isLoading } = useAuth()
+// AdminRoutes are only accessible to admin users
+const adminRoutes = ["/admin", "/admin/products", "/admin/orders", "/admin/users"]
+
+export default function RouteGuard({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, isAdmin, profile } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
-  const [isAuthorized, setIsAuthorized] = useState(false)
 
   useEffect(() => {
-    // Si todavía está cargando, no hacer nada
+    // Don't do anything while auth is loading
     if (isLoading) return
 
-    // Verificar autorización
-    if (requireAuth && !user) {
-      // Redirigir a login si se requiere autenticación y no hay usuario
-      router.push(`/login?returnUrl=${encodeURIComponent(pathname)}`)
-    } else if (requireAdmin && !isAdmin) {
-      // Redirigir a la página principal si se requiere admin y el usuario no es admin
-      router.push("/")
-    } else {
-      // Usuario autorizado
-      setIsAuthorized(true)
-    }
-  }, [user, isAdmin, isLoading, requireAuth, requireAdmin, router, pathname])
+    // Logic for routes that require authentication
+    const isPublicRoute = publicRoutes.some(route => 
+      pathname === route || pathname.startsWith(`${route}/`)
+    )
 
-  // Mostrar spinner mientras se carga o verifica la autorización
-  if (isLoading || !isAuthorized) {
+    const isAdminRoute = adminRoutes.some(route => 
+      pathname === route || pathname.startsWith(`${route}/`)
+    )
+
+    // If not logged in and trying to access a protected route
+    if (!isAuthenticated && !isPublicRoute) {
+      router.push(`/login?returnUrl=${encodeURIComponent(pathname)}`)
+      return
+    }
+
+    // If logged in but not admin and trying to access admin route
+    if (isAuthenticated && isAdminRoute && !isAdmin) {
+      router.push("/dashboard")
+      return
+    }
+
+    // If logged in and trying to access login/register
+    if (isAuthenticated && (pathname === "/login" || pathname === "/register")) {
+      router.push("/dashboard")
+      return
+    }
+  }, [isAuthenticated, isLoading, isAdmin, pathname, router])
+
+  // While loading auth state, don't render children
+  if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <LoadingSpinner />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-azul-claro"></div>
+          <p className="mt-2 text-lg text-gray-600">Cargando...</p>
+        </div>
       </div>
     )
   }
 
-  // Renderizar los hijos si está autorizado
   return <>{children}</>
 }
 

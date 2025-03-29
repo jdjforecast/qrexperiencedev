@@ -1,128 +1,83 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "@/lib/auth/client"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useToast } from "@/components/ui/use-toast"
-import { Label } from "@/components/ui/label"
+import { useAuth } from "@/lib/auth-context"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const returnUrl = searchParams?.get("returnUrl") || "/dashboard"
-  const { refreshUser } = useAuth()
-  const { toast } = useToast()
+  const returnUrl = searchParams.get("returnUrl") || "/dashboard"
+  
+  // Get login function from auth context
+  const { login, isAuthenticated } = useAuth()
+
+  // Redirect if already logged in
+  if (isAuthenticated) {
+    router.push(returnUrl)
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!email || !password) {
-      setError("Por favor, completa todos los campos")
-      return
-    }
+    setIsLoading(true)
 
     try {
-      setIsLoading(true)
-      setError(null)
-
-      console.log("Iniciando proceso de login...")
-
-      const result = await signIn(email, password)
-
-      console.log("Resultado del login:", result)
-
-      if (!result.success) {
-        setError(result.message)
-        toast({
-          title: "Error de inicio de sesión",
-          description: result.message,
-          variant: "destructive",
-        })
-        return
+      const result = await login(email, password)
+      
+      if (result.success) {
+        router.push(returnUrl)
       }
-
-      console.log("Login exitoso, actualizando información del usuario...")
-
-      // Actualizar el contexto de autenticación
-      await refreshUser()
-
-      console.log("Información del usuario actualizada, redirigiendo a:", returnUrl)
-
-      toast({
-        title: "Inicio de sesión exitoso",
-        description: "Redirigiendo...",
-        variant: "default",
-      })
-
-      // Pequeño retraso para asegurar que la sesión se establezca completamente
-      setTimeout(() => {
-        router.replace(returnUrl)
-        router.refresh()
-      }, 500)
-    } catch (err) {
-      console.error("Error en el proceso de login:", err)
-      setError("Error al iniciar sesión. Por favor, intenta de nuevo.")
-      toast({
-        title: "Error de inicio de sesión",
-        description: "Error al iniciar sesión. Por favor, intenta de nuevo.",
-        variant: "destructive",
-      })
+    } catch (error) {
+      console.error("Login error:", error)
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0055a5] px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
+    <div className="flex min-h-[calc(100vh-150px)] flex-col items-center justify-center py-12">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg">
         <div className="text-center">
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">Iniciar Sesión</h2>
-          <p className="mt-2 text-center text-sm text-white/80">
+          <h2 className="text-3xl font-extrabold text-gray-900">Iniciar sesión</h2>
+          <p className="mt-2 text-sm text-gray-600">
             ¿No tienes una cuenta?{" "}
-            <Link href="/register" className="font-medium text-[#a4ce4e] hover:text-[#b5df5f]">
+            <Link href="/register" className="font-medium text-azul-claro hover:text-azul-oscuro">
               Regístrate
             </Link>
           </p>
         </div>
-        <form className="mt-8 space-y-6 bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-xl" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="-space-y-px rounded-md shadow-sm">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-white mb-1">
+              <label htmlFor="email" className="sr-only">
                 Correo electrónico
               </label>
               <input
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-white/20 bg-white/10 placeholder-white/60 text-white rounded-md focus:outline-none focus:ring-[#a4ce4e] focus:border-[#a4ce4e] focus:z-10 sm:text-sm"
+                className="relative block w-full rounded-t-md border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-azul-claro"
                 placeholder="Correo electrónico"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-white mb-1">
+              <label htmlFor="password" className="sr-only">
                 Contraseña
               </label>
               <input
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
                 required
-                className="appearance-none relative block w-full px-3 py-2 border border-white/20 bg-white/10 placeholder-white/60 text-white rounded-md focus:outline-none focus:ring-[#a4ce4e] focus:border-[#a4ce4e] focus:z-10 sm:text-sm"
+                className="relative block w-full rounded-b-md border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-azul-claro"
                 placeholder="Contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -131,20 +86,11 @@ export default function LoginPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-[#a4ce4e] focus:ring-[#a4ce4e] border-white/30 rounded bg-white/10"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-white">
-                Recordarme
-              </label>
-            </div>
-
             <div className="text-sm">
-              <Link href="/forgot-password" className="font-medium text-[#a4ce4e] hover:text-[#b5df5f]">
+              <Link
+                href="/auth/forgot-password"
+                className="font-medium text-azul-claro hover:text-azul-oscuro"
+              >
                 ¿Olvidaste tu contraseña?
               </Link>
             </div>
@@ -154,25 +100,11 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-full text-white bg-[#004489] hover:bg-[#003366] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#a4ce4e] disabled:opacity-50 shadow-lg"
-              onClick={() => console.log("Botón de inicio de sesión clickeado")}
+              className="group relative flex w-full justify-center rounded-md bg-azul-oscuro px-3 py-3 text-sm font-semibold text-white hover:bg-azul-claro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azul-claro disabled:opacity-70"
             >
-              {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
             </button>
           </div>
-
-          {error && (
-            <div className="rounded-md bg-red-900/30 border border-red-500/50 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-200">Error</h3>
-                  <div className="mt-2 text-sm text-red-100">
-                    <p>{error}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </form>
       </div>
     </div>

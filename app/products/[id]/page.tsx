@@ -1,9 +1,6 @@
-import { cookies } from "next/headers"
-import { createClient, type CookieOptions } from "@supabase/ssr"
 import { notFound } from "next/navigation"
 import { Metadata } from "next"
-
-import RouteGuard from "@/components/auth/route-guard"
+import { createServerClientForApi } from "@/lib/supabase/server-api"
 import ProductDetailsClient from "./product-details-client"
 
 interface Product {
@@ -21,34 +18,10 @@ interface ProductPageProps {
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const cookieStore = cookies()
   const id = params.id
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set(name, value, options)
-          } catch (error) {
-            console.error("Error setting cookie:", error)
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options, maxAge: 0 })
-          } catch (error) {
-            console.error("Error removing cookie:", error)
-          }
-        },
-      },
-    }
-  )
+  // Usar nuestro cliente Supabase sin dependencia de cookies/headers
+  const supabase = createServerClientForApi()
 
   const { data: product, error: fetchError } = await supabase
     .from("products")
@@ -66,39 +39,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   return (
-    <RouteGuard requireAuth>
-      <div className="container mx-auto p-4">
-        <ProductDetailsClient product={product} />
-      </div>
-    </RouteGuard>
+    <div className="container mx-auto p-4">
+      <ProductDetailsClient product={product} />
+    </div>
   )
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const cookieStore = cookies()
   const id = params.id
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set(name, value, options)
-          } catch (error) {}
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options, maxAge: 0 })
-          } catch (error) {}
-        },
-      },
-    }
-  )
+  // Usar nuestro cliente Supabase sin dependencia de cookies/headers
+  const supabase = createServerClientForApi()
 
   const { data: product } = await supabase
     .from("products")

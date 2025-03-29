@@ -3,6 +3,9 @@ import "./globals.css"
 import type { Metadata } from "next"
 import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
+import { AuthProvider } from "@/lib/auth-context"
+import { Toaster } from "@/components/ui/toaster"
+import RouteGuard from "@/components/auth/route-guard"
 
 export const metadata: Metadata = {
   title: "Mi Partner App",
@@ -18,11 +21,16 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <div className="main-layout">
-          <Navbar />
-          <main className="main-content">{children}</main>
-          <Footer />
-        </div>
+        <AuthProvider>
+          <RouteGuard>
+            <div className="main-layout">
+              <Navbar />
+              <main className="main-content">{children}</main>
+              <Footer />
+            </div>
+          </RouteGuard>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   )

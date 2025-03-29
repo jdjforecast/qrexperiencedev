@@ -1,37 +1,19 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { getUserProfile, signOut } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 
 export function Navbar() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
+  const { profile, isAuthenticated, isAdmin, logout } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const profile = await getUserProfile()
-        if (profile) {
-          setUser(profile)
-        }
-      } catch (error) {
-        console.error("Error fetching user profile:", error)
-      }
-    }
-
-    fetchUser()
-  }, [])
 
   const handleSignOut = async () => {
     try {
-      // Assuming you have a signOut function in your auth lib
-      await signOut()
-      router.push("/")
-      router.refresh()
+      await logout()
     } catch (error) {
       console.error("Error signing out:", error)
     }
@@ -56,7 +38,7 @@ export function Navbar() {
 
       {/* Desktop menu */}
       <div className="hidden md:flex items-center space-x-4">
-        {user ? (
+        {isAuthenticated ? (
           <>
             <Link href="/dashboard" className="text-blanco hover:text-verde">
               Dashboard
@@ -64,7 +46,7 @@ export function Navbar() {
             <Link href="/cart" className="text-blanco hover:text-verde">
               Carrito
             </Link>
-            {user.role === "admin" && (
+            {isAdmin && (
               <Link href="/admin" className="text-blanco hover:text-verde">
                 Admin
               </Link>
@@ -88,7 +70,7 @@ export function Navbar() {
       {/* Mobile menu */}
       {isMenuOpen && (
         <div className="md:hidden absolute top-16 right-0 left-0 bg-azul-oscuro p-4 z-50">
-          {user ? (
+          {isAuthenticated ? (
             <div className="flex flex-col space-y-2">
               <Link href="/dashboard" className="text-blanco hover:text-verde">
                 Dashboard
@@ -96,7 +78,7 @@ export function Navbar() {
               <Link href="/cart" className="text-blanco hover:text-verde">
                 Carrito
               </Link>
-              {user.role === "admin" && (
+              {isAdmin && (
                 <Link href="/admin" className="text-blanco hover:text-verde">
                   Admin
                 </Link>
