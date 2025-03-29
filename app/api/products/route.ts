@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createProduct, getAllProducts } from "@/lib/storage/products"
-import { getCurrentUser, isUserAdmin } from "@/lib/auth/server"
+import { getCurrentUser, isUserAdmin } from "@/lib/auth/server-api"
 import { NewProductSchema, ProductSchema } from "@/types/schemas"
 import type { Product } from "@/types/product"
 import { z } from "zod"
@@ -8,11 +8,15 @@ import { z } from "zod"
 // GET Handler to fetch all products (Admin only)
 export async function GET(request: Request) {
   try {
-    // 1. Authentication & Authorization
-    const user = await getCurrentUser()
+    // Obtener usuario actual usando la request
+    const user = await getCurrentUser(request);
+
+    // Verificar si el usuario está autenticado
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
+
+    // 1. Authentication & Authorization
     const admin = await isUserAdmin(user.id)
     if (!admin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
@@ -48,7 +52,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     // Verificar autenticación y permisos de admin
-    const user = await getCurrentUser()
+    const user = await getCurrentUser(request)
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
