@@ -3,14 +3,13 @@
 import { useState } from "react"
 import { Scan, KeyboardIcon, X } from "lucide-react"
 import QrScannerFab from "./qr-scanner-fab"
-import QrScannerAlternative from "./qr-scanner-alternative"
 import ManualCodeEntry from "./manual-code-entry"
 
 export default function MultiOptionScanner() {
   const [showOptions, setShowOptions] = useState(false)
-  const [selectedOption, setSelectedOption] = useState<"scanner" | "alternative" | "manual" | null>(null)
+  const [selectedOption, setSelectedOption] = useState<"scanner" | "manual" | null>(null)
 
-  const handleSelectOption = (option: "scanner" | "alternative" | "manual") => {
+  const handleSelectOption = (option: "scanner" | "manual") => {
     setSelectedOption(option)
     setShowOptions(false)
   }
@@ -19,8 +18,6 @@ export default function MultiOptionScanner() {
     switch (selectedOption) {
       case "scanner":
         return <QrScannerFab />
-      case "alternative":
-        return <QrScannerAlternative />
       case "manual":
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
@@ -63,14 +60,6 @@ export default function MultiOptionScanner() {
           >
             <Scan className="mr-2 h-5 w-5 text-blue-600" />
             <span>Escáner QR</span>
-          </button>
-
-          <button
-            onClick={() => handleSelectOption("alternative")}
-            className="flex w-full items-center rounded-md p-2 text-left hover:bg-gray-100"
-          >
-            <Scan className="mr-2 h-5 w-5 text-green-600" />
-            <span>Escáner alternativo</span>
           </button>
 
           <button
