@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install",
+  "buildCommand": "node build.js",
+  "installCommand": "npm install --no-save",
   "framework": "nextjs"
 } 

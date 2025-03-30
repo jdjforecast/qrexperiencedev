@@ -1,4 +1,4 @@
-import { createClientComponentClient, createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient, createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
@@ -21,7 +21,11 @@ export function isAdminRoute(pathname: string): boolean {
 
 // Obtener el usuario actual (versión para componentes de servidor)
 export const getCurrentUser = cache(async () => {
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies }
+  )
 
   try {
     const {
@@ -55,7 +59,11 @@ export const isUserAdmin = cache(async () => {
       return false
     }
 
-    const supabase = createServerComponentClient({ cookies })
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies }
+    )
 
     // Primero verificar en la tabla users
     const { data: userData, error: userError } = await supabase
@@ -123,7 +131,10 @@ export async function requireAdmin() {
 
 // Funciones de autenticación para el cliente
 export function getAuthFunctions() {
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   return {
     signInWithEmail: async (email: string, password: string) => {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createServerClient } from "@/lib/supabase-client"
+import { createServerClient } from "@supabase/ssr"
 import { isPublicRoute, isAdminRoute } from "@/lib/auth"
 
 export async function middleware(request: NextRequest) {
@@ -20,8 +20,24 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
+    const response = NextResponse.next();
+    
     // Crear cliente de Supabase para el servidor
-    const supabase = createServerClient()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { 
+        cookies: {
+          get: (name) => request.cookies.get(name)?.value,
+          set: (name, value, options) => {
+            response.cookies.set({ name, value, ...options });
+          },
+          remove: (name, options) => {
+            response.cookies.delete({ name, ...options });
+          }
+        }
+      }
+    )
 
     // Verificar si hay una sesión activa
     const {
@@ -66,7 +82,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Usuario autenticado y con permisos correctos
-    return NextResponse.next()
+    return response
   } catch (error) {
     console.error("Error in middleware:", error)
 
