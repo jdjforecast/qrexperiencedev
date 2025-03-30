@@ -1,6 +1,9 @@
+"use client"
+
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getBrowserClient } from '@/lib/supabase'
+import { getBrowserClient } from '@/lib/supabase-client'
+import LoadingSpinner from "@/components/ui/loading-spinner"
 
 // Interface matching the data we fetch - fetch id, name, and urlpage
 interface ProductInfo {
@@ -30,7 +33,8 @@ export default function DevProductListPage() {
           throw dbError;
         }
 
-        setProducts(data || []);
+        // Type assertion since we know the shape matches ProductInfo
+        setProducts((data || []) as ProductInfo[]);
 
       } catch (err: any) {
         console.error("Error loading product list for dev page:", err)
