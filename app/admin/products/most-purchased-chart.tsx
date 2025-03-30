@@ -11,7 +11,7 @@ interface ChartData {
   totalQuantity: number;
 }
 
-const MostPurchasedChart: React.FC = () => {
+export default function MostPurchasedChart() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,7 +149,5 @@ const MostPurchasedChart: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
-
-export default MostPurchasedChart;
+}
 

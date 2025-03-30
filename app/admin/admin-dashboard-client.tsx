@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MostPurchasedChart } from "@/app/admin/products/most-purchased-chart"
+import MostPurchasedChart from "./products/most-purchased-chart"
 
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState("overview")
