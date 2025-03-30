@@ -138,30 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Effect for route protection
-  useEffect(() => {
-    if (isLoading) return;
-
-    const isAuthenticated = !!user;
-
-    if (!isAuthenticated && !isPublicRoute(pathname)) {
-      console.log(`AuthProvider: Not authenticated, redirecting from ${pathname} to login`);
-      router.push(`${ROUTES.LOGIN}?returnUrl=${encodeURIComponent(pathname)}`);
-      return;
-    }
-
-    if (isAuthenticated && isAdminRoute(pathname) && !isAdmin) {
-      console.log(`AuthProvider: Authenticated but not admin, redirecting from ${pathname} to dashboard`);
-      router.push(ROUTES.PROFILE);
-      return;
-    }
-
-    if (isAuthenticated && (pathname === ROUTES.LOGIN || pathname === ROUTES.REGISTER)) {
-      console.log(`AuthProvider: Authenticated, redirecting from ${pathname} to dashboard`);
-      router.push(ROUTES.PROFILE);
-    }
-  }, [user, profile, pathname, isLoading, router, isAdmin]);
-
   // Sign in with email and password
   const signIn = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {

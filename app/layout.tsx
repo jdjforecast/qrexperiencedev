@@ -22,11 +22,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="h-full">
-      <body className={`${inter.className} min-h-screen bg-gray-50`}>
+      <body className={`${inter.className} min-h-screen`}>
         <AuthProvider>
-          <div className="main-layout">
+          <div className="flex flex-col min-h-screen">
             <Navbar />
-            <main className="main-content">{children}</main>
+            <main className="flex-grow container mx-auto px-4 py-8">
+              {children}
+            </main>
             <Footer />
           </div>
           <Toaster />
