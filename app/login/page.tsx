@@ -3,10 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { getBrowserClient } from "@/lib/supabase"
 
 // Define el esquema de validación
 const loginSchema = z.object({
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const returnUrl = searchParams.get("returnUrl") || "/dashboard"
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const supabase = getBrowserClient()
 
   const {
     register,
@@ -40,14 +41,13 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const result = await signIn("credentials", {
+      const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
-        redirect: false,
       })
 
-      if (result?.error) {
-        setError("Credenciales inválidas")
+      if (error) {
+        setError(error.message || "Credenciales inválidas")
         return
       }
 
@@ -134,7 +134,7 @@ export default function LoginPage() {
             </div>
             <div className="text-sm">
               <Link
-                href="/auth/forgot-password"
+                href="/forgot-password"
                 className="font-medium text-indigo-600 hover:text-indigo-500"
               >
                 ¿Olvidaste tu contraseña?

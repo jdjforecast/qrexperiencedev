@@ -3,11 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/components/auth/AuthProvider"
+import { getBrowserClient } from "@/lib/supabase"
 
 export default function RegisterPage() {
-  const { signUp } = useAuth()
   const router = useRouter()
+  const supabase = getBrowserClient()
   
   const [fullName, setFullName] = useState("")
   const [companyName, setCompanyName] = useState("")
@@ -30,17 +30,42 @@ export default function RegisterPage() {
     setIsLoading(true)
     
     try {
-      const { success, message } = await signUp(email, password, {
-        fullName,
-        companyName
+      // Registrar el usuario con Supabase
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            company_name: companyName
+          }
+        }
       })
       
-      if (success) {
-        // En Supabase Auth con verificación de email, redirigir a una página de confirmación
-        router.push("/login?registered=true")
-      } else {
-        setError(message || "Error al registrar usuario")
+      if (signUpError) {
+        setError(signUpError.message)
+        return
       }
+      
+      // Crear perfil en la tabla profiles
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email,
+            full_name: fullName,
+            company_name: companyName,
+            role: 'user'
+          })
+        
+        if (profileError) {
+          console.error("Error al crear perfil:", profileError)
+        }
+      }
+      
+      // Redirigir al usuario
+      router.push("/login?registered=true")
     } catch (err) {
       console.error("Error durante el registro:", err)
       setError("Error inesperado durante el registro")

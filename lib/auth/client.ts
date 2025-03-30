@@ -3,129 +3,64 @@
 /**
  * Cliente de autenticación - funciones específicas para componentes cliente
  * 
- * Este archivo contiene funciones y hooks relacionados con la autenticación
+ * Este archivo contiene funciones relacionadas con la autenticación
  * que solo pueden usarse en componentes cliente.
  */
 
-import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { dataAPI } from '../supabase';
-
-// Re-export nextAuth functions directly for compatibility
-export const signIn = nextAuthSignIn;
-export const signOut = nextAuthSignOut;
+import { getBrowserClient } from '../supabase';
 
 /**
- * Hook para obtener la sesión actual del usuario y funciones de autenticación
+ * Registra un nuevo usuario usando Supabase
  */
-export function useAuth() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  const isAuthenticated = status === 'authenticated' && !!session;
-  const isLoading = status === 'loading';
-  const userId = session?.user?.id;
-  const userRole = session?.user?.role || 'user';
-  const isAdmin = userRole === 'admin';
-
-  const login = async (email: string, password: string) => {
-    const result = await nextAuthSignIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
-    
-    return result;
-  };
-
-  const logout = async () => {
-    await nextAuthSignOut({ redirect: false });
-    router.push('/login');
-  };
-
-  // Verificar si el usuario ya tiene un producto específico
-  // Usando la función de dataAPI que ya usa Supabase para la BD
-  const hasProduct = async (productId: string) => {
-    if (!userId) return false;
-    return await dataAPI.hasUserProduct(userId, productId);
-  };
-
-  return {
-    session,
-    status,
-    isAuthenticated,
-    isLoading,
-    userId,
-    userRole,
-    isAdmin,
-    login,
-    logout,
-    hasProduct,
-  };
-}
-
-/**
- * Función para validar si un usuario puede acceder a un recurso
- * basado en su rol (para usar en client components)
- */
-export function canAccess(userRole: string | undefined, requiredRole: string = 'user'): boolean {
-  if (!userRole) return false;
-  if (requiredRole === 'admin') return userRole === 'admin';
-  return true; // Si el rol requerido es user, cualquier usuario autenticado puede acceder
-}
-
-/**
- * Registra un nuevo usuario usando NextAuth
- * Adaptado para mantener compatibilidad con el código existente
- */
-interface RegisterResult {
-  success: boolean;
-  error?: string;
-  user?: any;
-  message?: string;
-}
-
 export async function registerUser(
   email: string, 
   password: string, 
   fullName: string,
   companyName: string = ""
-): Promise<RegisterResult> {
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  const supabaseClient = getBrowserClient();
+  
   try {
-    // Usar NextAuth para registrar usuario
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password,
-        name: fullName,
-        company: companyName
-      }),
+    // 1. Registrar el usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          company_name: companyName
+        },
+      }
     });
     
-    const data = await response.json();
-    
-    if (!response.ok) {
+    if (authError) {
       return {
         success: false,
-        error: data.error || 'Error al registrar usuario',
-        message: data.error || 'Error al registrar usuario'
+        error: authError.message,
+        message: authError.message
       };
     }
     
-    // Si el registro fue exitoso, iniciar sesión automáticamente
-    await nextAuthSignIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+    // 2. Crear un registro en la tabla de perfiles
+    if (authData.user) {
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email,
+          full_name: fullName,
+          company_name: companyName,
+          role: 'user' // Rol por defecto
+        });
+      
+      if (profileError) {
+        console.error('Error al crear perfil:', profileError);
+        // Continuamos porque el usuario ya está creado en Auth
+      }
+    }
     
     return {
       success: true,
-      user: data.user,
       message: 'Usuario registrado correctamente'
     };
   } catch (error) {
@@ -137,4 +72,14 @@ export async function registerUser(
       message: errorMessage
     };
   }
+}
+
+/**
+ * Función para validar si un usuario puede acceder a un recurso
+ * basado en su rol (para usar en client components)
+ */
+export function canAccess(userRole: string | undefined, requiredRole: string = 'user'): boolean {
+  if (!userRole) return false;
+  if (requiredRole === 'admin') return userRole === 'admin';
+  return true; // Si el rol requerido es user, cualquier usuario autenticado puede acceder
 } 

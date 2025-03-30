@@ -13,12 +13,12 @@ export function createSupabaseClient(options?: { admin?: boolean }) {
     throw new Error('Variables de entorno de Supabase faltantes')
   }
   
-  // Configuración para Auth con NextAuth (no persistir sesión en Supabase client)
+  // Configuración para autenticación con Supabase
   return createClient(supabaseUrl, supabaseKey, {
     auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false, // Evitar que intente leer sesión de la URL
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
     }
   })
 }

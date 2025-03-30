@@ -2,17 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { User, Session, AuthChangeEvent, SupabaseClient } from "@supabase/supabase-js";
+import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { getBrowserClient } from "@/lib/supabase";
 import { ROUTES } from "@/lib/routes";
-// Import NextAuth functions and hook from our client wrapper
-import { 
-  signIn as nextAuthSignIn, 
-  signOut as nextAuthSignOut, 
-  useAuth as useAppAuth 
-} from "@/lib/auth/client";
-// Import server function to get profile (assuming it uses Supabase admin client internally)
-import { getUserProfile } from "@/lib/auth"; 
 
 // Define public routes based on the ROUTES object
 const PUBLIC_ROUTE_VALUES: string[] = [
@@ -45,7 +37,7 @@ interface ProfileData {
 }
 
 interface AuthContextType {
-  user: any | null; // Using any to accommodate the combined user data
+  user: User | null;
   profile: ProfileData | null;
   isAdmin: boolean;
   isLoading: boolean;
@@ -64,64 +56,93 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Use our custom hook that wraps NextAuth's useSession
-  const { session, status: nextAuthStatus, isLoading: nextAuthHookIsLoading } = useAppAuth();
-  const nextAuthIsLoading = nextAuthHookIsLoading || nextAuthStatus === 'loading';
-  const userId = session?.user?.id; // Assuming NextAuth session.user has the Supabase ID
-
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  // Combined loading state: true if either NextAuth or profile fetch is loading
-  const [isProfileLoading, setIsProfileLoading] = useState<boolean>(true);
-  const isLoading = nextAuthIsLoading || isProfileLoading;
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch Supabase profile based on NextAuth user ID
-  const fetchProfile = async (currentUserId: string): Promise<ProfileData | null> => {
-    if (!currentUserId) return null;
-    setIsProfileLoading(true);
+  // Fetch user session and profile
+  const fetchUserAndProfile = async () => {
+    setIsLoading(true);
     setError(null);
     try {
-      console.log(`AuthProvider: Fetching Supabase profile for user ID: ${currentUserId}`);
-      // Use the server function getUserProfile (needs Supabase Admin client internally)
-      const profileData = await getUserProfile(currentUserId);
-      console.log("AuthProvider: Fetched profile data:", profileData);
-      if (!profileData) {
-          console.warn(`AuthProvider: No profile found for user ${currentUserId}`);
-          // Optionally create a default profile here if needed, or handle missing profile downstream
+      // Get Supabase session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("AuthProvider: Session error", sessionError);
+        setError(sessionError.message);
+        setUser(null);
+        setProfile(null);
+        setIsLoading(false);
+        return;
       }
-      return profileData as ProfileData;
+      
+      // If no session, clear state
+      if (!session) {
+        setUser(null);
+        setProfile(null);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Set user from session
+      setUser(session.user);
+      
+      // Fetch profile data from Supabase
+      if (session.user.id) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profileError) {
+          console.error("AuthProvider: Profile fetch error", profileError);
+          // Continue with just the user data
+        } else if (profileData) {
+          setProfile(profileData);
+          setIsAdmin(profileData.role === "admin");
+        }
+      }
     } catch (err) {
-      console.error("AuthProvider: Profile fetch error:", err);
-      setError("Error al cargar el perfil del usuario.");
-      return null;
+      console.error("AuthProvider: Error fetching user and profile", err);
+      setError("Error al cargar la sesión del usuario");
     } finally {
-      setIsProfileLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // Effect to fetch profile when NextAuth session is available/changes
+  // Load user on initial mount
   useEffect(() => {
-    if (userId) {
-      fetchProfile(userId).then(fetchedProfile => {
-        setProfile(fetchedProfile);
-        setIsAdmin(fetchedProfile?.role === "admin");
-      });
-    } else if (!nextAuthIsLoading) {
-      // If NextAuth is not loading and there's no userId, clear profile
-      setProfile(null);
-      setIsAdmin(false);
-      setIsProfileLoading(false); // Ensure loading stops if no user
-    }
-    // Dependencies: userId derived from NextAuth session, and nextAuthIsLoading status
-  }, [userId, nextAuthIsLoading]);
+    fetchUserAndProfile();
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("AuthProvider: Auth state change", event);
+        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+          await fetchUserAndProfile();
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          setIsAdmin(false);
+        }
+      }
+    );
+    
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Effect for route protection
   useEffect(() => {
-    if (isLoading) return; // Wait until both NextAuth and profile loading are done
+    if (isLoading) return;
 
-    const isAuthenticated = !!userId;
-    const currentIsAdmin = profile?.role === "admin";
+    const isAuthenticated = !!user;
 
     if (!isAuthenticated && !isPublicRoute(pathname)) {
       console.log(`AuthProvider: Not authenticated, redirecting from ${pathname} to login`);
@@ -129,101 +150,100 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isAuthenticated && isAdminRoute(pathname) && !currentIsAdmin) {
+    if (isAuthenticated && isAdminRoute(pathname) && !isAdmin) {
       console.log(`AuthProvider: Authenticated but not admin, redirecting from ${pathname} to dashboard`);
-      router.push(ROUTES.PROFILE); // Redirect non-admins from admin routes
+      router.push(ROUTES.PROFILE);
       return;
     }
 
     if (isAuthenticated && (pathname === ROUTES.LOGIN || pathname === ROUTES.REGISTER)) {
       console.log(`AuthProvider: Authenticated, redirecting from ${pathname} to dashboard`);
-      router.push(ROUTES.PROFILE); // Redirect logged-in users from login/register
+      router.push(ROUTES.PROFILE);
     }
-  }, [userId, profile, pathname, isLoading, router]); // Depends on combined isLoading
+  }, [user, profile, pathname, isLoading, router, isAdmin]);
 
-  // SignIn using NextAuth
+  // Sign in with email and password
   const signIn = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    console.log("AuthProvider: Attempting sign in via NextAuth...");
     try {
-      const result = await nextAuthSignIn('credentials', {
-        redirect: false,
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      console.log("AuthProvider: NextAuth signIn result:", result);
-
-      if (result?.ok) {
-        return { success: true, message: "Inicio de sesión exitoso" };
-      } else {
-        return { success: false, message: result?.error || "Error al iniciar sesión" };
+      if (error) {
+        console.error("AuthProvider: Sign in error", error);
+        return { success: false, message: error.message };
       }
+      
+      await fetchUserAndProfile();
+      
+      return { success: true, message: "Inicio de sesión exitoso" };
     } catch (err) {
-      console.error("AuthProvider: NextAuth sign in error:", err);
+      console.error("AuthProvider: Sign in error", err);
       return { success: false, message: "Error al iniciar sesión" };
     }
-  }
+  };
 
-  // SignOut using NextAuth
+  // Sign out
   const signOut = async (): Promise<{ success: boolean; message: string }> => {
-    console.log("AuthProvider: Attempting sign out via NextAuth...");
     try {
-      await nextAuthSignOut({ redirect: false });
-      // Clear local state immediately
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("AuthProvider: Sign out error", error);
+        return { success: false, message: error.message };
+      }
+      
+      // Clear local state
+      setUser(null);
       setProfile(null);
       setIsAdmin(false);
+      
       return { success: true, message: "Sesión cerrada exitosamente" };
     } catch (err) {
-      console.error("AuthProvider: NextAuth sign out error:", err);
+      console.error("AuthProvider: Sign out error", err);
       return { success: false, message: "Error al cerrar sesión" };
     }
-  }
+  };
 
-  // Function to manually refresh profile (renamed from refreshProfile to refreshUser)
+  // Function to manually refresh profile
   const refreshUser = async () => {
-    if (userId) {
-      const fetchedProfile = await fetchProfile(userId);
-      setProfile(fetchedProfile);
-      setIsAdmin(fetchedProfile?.role === "admin");
+    if (user) {
+      await fetchUserAndProfile();
     } else {
-      console.log("AuthProvider: Cannot refresh profile, no user ID available.");
+      console.log("AuthProvider: Cannot refresh profile, no user available");
     }
   };
 
   // Function to refresh session
   const refreshSession = async () => {
     try {
-      await refreshUser();
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error("AuthProvider: Session refresh error", error);
+        setError("Error al actualizar la sesión");
+      } else {
+        await fetchUserAndProfile();
+      }
     } catch (err) {
-      console.error("AuthProvider: Error refreshing session:", err);
+      console.error("AuthProvider: Error refreshing session", err);
       setError("Error al actualizar la sesión");
     }
   };
 
-  // Construct the user object for the context value
-  // Combine data from NextAuth session (like email) with Supabase profile
-  const contextUser = useMemo(() => {
-    if (!profile) return null;
-    return {
-      ...session?.user, // Include basic session info like email
-      ...profile, // Include all profile fields (id, role, full_name, etc.)
-      id: profile.id // Ensure Supabase profile ID overrides session ID if different
-    };
-  }, [session, profile]);
-
   // Memoize the final context value
   const value = useMemo(() => ({
-    user: contextUser,
+    user,
     profile,
     isLoading,
     isAdmin,
     error,
-    isAuthenticated: !!contextUser,
+    isAuthenticated: !!user,
     signIn,
     signOut,
     refreshUser,
     refreshSession
-  }), [contextUser, profile, isLoading, isAdmin, error, signIn, signOut, refreshUser, refreshSession]);
+  }), [user, profile, isLoading, isAdmin, error]);
   
   return (
     <AuthContext.Provider value={value}>
