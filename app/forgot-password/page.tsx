@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { toast } from "sonner"
 
 export default function ForgotPasswordPage() {

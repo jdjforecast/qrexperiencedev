@@ -1,10 +1,10 @@
 "use client"
 
-import { createClientClient } from "@/lib/supabase/client"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import type { ProductWithImages } from "./types"
 
 export async function getProductById(id: string): Promise<{ product: ProductWithImages | null; error: Error | null }> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
 
   try {
     const { data: product, error } = await supabase
@@ -32,7 +32,7 @@ export async function getProductById(id: string): Promise<{ product: ProductWith
 export async function getProductByUrlPage(
   urlpage: string,
 ): Promise<{ product: ProductWithImages | null; error: Error | null }> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
 
   try {
     const { data: product, error } = await supabase
@@ -59,7 +59,7 @@ export async function getProductByUrlPage(
 }
 
 export async function checkProductQR(productId: string): Promise<boolean> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
 
   try {
     const { data: qrInfo } = await supabase.from("qr_codes").select("id").eq("product_id", productId).limit(1)
@@ -72,7 +72,7 @@ export async function checkProductQR(productId: string): Promise<boolean> {
 }
 
 export async function getProductsWithoutUrlPage(): Promise<{ products: ProductWithImages[]; error: Error | null }> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
 
   try {
     const { data: products, error } = await supabase
@@ -111,7 +111,7 @@ export async function generateUrlPage(product: ProductWithImages): Promise<strin
 }
 
 export async function updateProductUrlPage(productId: string, urlpage: string): Promise<{ error: Error | null }> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
 
   try {
     const { error } = await supabase.from("products").update({ urlpage }).eq("id", productId)

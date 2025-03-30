@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Html5Qrcode } from "html5-qrcode"
-import { createBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
+import { useRouter } from "next/navigation"
 
 interface QRScannerProps {
   userId?: string | null
@@ -87,7 +88,7 @@ export default function QRScanner({ userId }: QRScannerProps) {
 
   const recordScanEvent = async (qrCode: string, userId: string) => {
     try {
-      const supabase = createBrowserClient()
+      const supabase = getBrowserClient()
 
       const deviceInfo = {
         userAgent: navigator.userAgent,

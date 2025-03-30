@@ -3,7 +3,7 @@
  * especialmente en API Routes y Server Components.
  */
 
-import { createServerClient as createServerClientFromLib } from "@/lib/supabase/server"
+import { getServerClient } from "@/lib/supabase-client-server"
 import type { User } from "@supabase/supabase-js"
 
 // Define a type for the profile data
@@ -21,7 +21,7 @@ interface ProfileData {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const supabase = await createServerClientFromLib()
+    const supabase = await getServerClient()
     const { data, error } = await supabase.auth.getSession()
 
     if (error) {
@@ -57,7 +57,7 @@ export async function getUserProfile(userId: string): Promise<ProfileData | null
       return null
     }
 
-    const supabase = await createServerClientFromLib({ admin: true })
+    const supabase = await getServerClient({ admin: true })
 
     const { data: existingProfile, error: checkError } = await supabase
       .from("profiles")
@@ -135,7 +135,7 @@ export async function isUserAdmin(userId: string | undefined | null): Promise<bo
  * Helper para componentes de servidor y API routes
  */
 export async function createServerClient(options?: { admin?: boolean }) {
-  return createServerClientFromLib(options)
+  return getServerClient(options)
 }
 
 /**
@@ -158,7 +158,7 @@ export async function registerUser(
   companyName = "",
 ): Promise<RegisterResult> {
   try {
-    const supabase = await createServerClientFromLib()
+    const supabase = await getServerClient()
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
 

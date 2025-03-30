@@ -1,6 +1,6 @@
 // import { cookies } from "next/headers";
 // import { createClient } from "@/lib/supabase/server"; // Re-import server client
-import { createClientClient } from "@/lib/supabase/client" // Import the client-side Supabase client
+import { getBrowserClient } from "@/lib/supabase-client-browser" // Import the client-side Supabase client
 // import { clearCart } from "./cart"
 import type { CartItem } from "@/types/cart" // Import the standardized CartItem type
 import type { Order } from "@/types/order" // Import the Order type
@@ -26,7 +26,7 @@ export async function createOrder(
   cartItems: CartItem[],
   total: number,
 ): Promise<{ success: boolean; data?: { order_id: string }; error?: string }> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
   // Prepare cart items for JSONB argument, ensuring price is included
   const itemsPayload = cartItems.map((item) => ({
     product_id: item.product_id,
@@ -69,7 +69,7 @@ export async function createOrder(
 
 // Refactored getUserOrders with Zod validation
 export async function getUserOrders(userId: string): Promise<OrdersFetchResult> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
   try {
     const { data, error } = await supabase
       .from("orders")
@@ -116,7 +116,7 @@ export async function getUserOrders(userId: string): Promise<OrdersFetchResult> 
 
 // Refactored getOrderById with Zod validation
 export async function getOrderById(orderId: string): Promise<OrderFetchResult> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
   try {
     const { data, error } = await supabase
       .from("orders")
@@ -170,7 +170,7 @@ export async function updateOrderStatus(
   orderId: string,
   status: string,
 ): Promise<{ success: boolean; data?: Order; error?: string }> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
   try {
     const { data, error } = await supabase
       .from("orders")

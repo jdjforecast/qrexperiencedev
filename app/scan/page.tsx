@@ -1,10 +1,10 @@
-import { createServerClient } from "@/lib/supabase"
+import { getServerClient } from "@/lib/supabase-client-server"
 import { cookies } from "next/headers"
 import QRScanner from "./qr-scanner"
 
 export default async function ScanPage() {
   const cookieStore = cookies()
-  const supabase = createServerClient({
+  const supabase = getServerClient({
     get: (name) => {
       const cookie = cookieStore.get(name)
       return cookie ? { value: cookie.value } : { value: undefined }

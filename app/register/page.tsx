@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation"
-import { createServerClient, getCurrentUser } from "@/lib/supabase"
+import { getServerClient } from "@/lib/supabase-client-server"
+import { getCurrentUser } from "@/lib/auth-utils"
 import RegisterForm from "./register-form"
 
 export default async function RegisterPage() {
   try {
-    const supabase = createServerClient()
+    const supabase = getServerClient()
     const user = await getCurrentUser(supabase)
 
     // If user is already logged in, redirect to products

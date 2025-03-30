@@ -1,8 +1,8 @@
-import { createSupabaseClient } from "@/lib/supabase/index"
+import { getServerClient } from "@/lib/supabase-client-server"
 import { revalidatePath } from "next/cache"
 
 export default async function AdminUsersPage() {
-  const supabase = createSupabaseClient({ admin: true })
+  const supabase = getServerClient()
 
   // Obtener todos los usuarios de auth.users
   const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
@@ -113,7 +113,7 @@ async function makeAdmin(formData: FormData) {
   }
 
   try {
-    const supabase = createSupabaseClient({ admin: true })
+    const supabase = getServerClient()
 
     // Actualizar el rol del usuario a admin
     const { error } = await supabase.from("profiles").update({ role: "admin" }).eq("id", userId)

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getBrowserClient } from '@/lib/supabase-client'; // Asume que esta función devuelve un cliente Supabase para el navegador
+import { getBrowserClient } from '@/lib/supabase-client-browser';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import LoadingSpinner from "@/components/ui/loading-spinner"
 

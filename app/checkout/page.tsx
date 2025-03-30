@@ -6,7 +6,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useCart } from "@/components/cart/CartProvider"
-import { getCurrentUser, dataAPI } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
+import { getCurrentUser } from "@/lib/auth-utils"
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart()
@@ -63,7 +64,7 @@ export default function CheckoutPage() {
       }))
 
       // Create order in database
-      const order = await dataAPI.createOrder(user.id, orderItems)
+      const order = await getBrowserClient().createOrder(user.id, orderItems)
 
       // Clear cart after successful order
       clearCart()

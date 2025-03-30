@@ -3,7 +3,7 @@
  * y otros contextos que no pueden utilizar next/headers directamente.
  */
 
-import { createServerClientForApi } from "@/lib/supabase/server-api"
+import { getServerClient } from "@/lib/supabase-client-server"
 import type { User } from "@supabase/supabase-js"
 
 // Define a type for the profile data
@@ -28,7 +28,7 @@ export async function getUserProfile(userId: string): Promise<ProfileData | null
       return null
     }
 
-    const supabase = createServerClientForApi({ admin: true })
+    const supabase = getServerClient({ admin: true })
 
     const { data: existingProfile, error: checkError } = await supabase
       .from("profiles")
@@ -106,7 +106,7 @@ export async function isUserAdmin(userId: string | undefined | null): Promise<bo
  * Helper para componentes de servidor y API routes
  */
 export function createServerClient(options?: { admin?: boolean }) {
-  return createServerClientForApi(options)
+  return getServerClient(options)
 }
 
 /**
@@ -120,7 +120,7 @@ export async function getCurrentUserFromRequest(request: Request): Promise<User 
     const cookieHeader = request.headers.get("cookie") || ""
 
     // Inicializar Supabase con las cookies de la request
-    const supabase = createServerClientForApi()
+    const supabase = getServerClient()
 
     // Nota: No podemos establecer cookies manualmente en esta versión
     // En su lugar, dependemos de que las cookies se pasen automáticamente en el cliente

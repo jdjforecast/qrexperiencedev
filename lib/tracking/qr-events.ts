@@ -1,4 +1,4 @@
-import { createSupabaseClient } from "@/lib/supabase/index"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 
 export interface DeviceInfo {
   type: string
@@ -64,7 +64,7 @@ function getBrowser(ua: string): string {
  */
 export async function trackQRScan(event: QRScanEvent): Promise<void> {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = getBrowserClient()
 
     const { error } = await supabase.from("qr_scan_events").insert([
       {

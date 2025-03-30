@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, ExternalLink, AlertCircle } from "lucide-react"

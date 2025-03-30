@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { useAuth } from "@/components/auth/AuthProvider"
 
 export function RoleVerifier() {

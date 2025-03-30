@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createAdminClient } from "@/lib/supabase"
+import { getServerClient } from "@/lib/supabase-client-server"
 
 interface Order {
   id: string
@@ -32,7 +32,7 @@ export default function OrdersList() {
     async function fetchOrders() {
       try {
         setLoading(true)
-        const supabase = createAdminClient()
+        const supabase = getServerClient()
 
         // Obtener órdenes con información de usuario y productos
         const { data, error } = await supabase

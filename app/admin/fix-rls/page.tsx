@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { supabaseClient } from "@/lib/supabase/client-utils"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 
 export default function FixRLSPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -16,7 +16,7 @@ export default function FixRLSPage() {
 
     try {
       // Ejecutar la migración SQL directamente
-      const { error } = await supabaseClient.rpc("fix_rls")
+      const { error } = await getBrowserClient().rpc("fix_rls")
 
       if (error) {
         setResult({

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { supabaseClient } from "@/lib/supabase/client-utils"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { Loader2, CheckCircle, AlertTriangle } from "lucide-react"
 import AdminLayout from "@/components/admin-layout"
 
@@ -18,7 +18,7 @@ export default function MigrationsPage() {
 
     try {
       // Check if the code column exists
-      const { error } = await supabaseClient.rpc("run_migration")
+      const { error } = await getBrowserClient.rpc("run_migration")
 
       if (error) {
         setResult({

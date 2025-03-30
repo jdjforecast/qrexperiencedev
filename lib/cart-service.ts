@@ -1,4 +1,4 @@
-import { supabaseClient } from "@/lib/supabase/client-utils"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 
 // Define type for cart items based on the select in getUserCart
 interface CartItem {
@@ -23,7 +23,7 @@ export async function addProductToCartFromQR(productId: string) {
     // Verificar si el usuario está autenticado
     const {
       data: { session },
-    } = await supabaseClient.auth.getSession()
+    } = await getBrowserClient.auth.getSession()
     if (!session) {
       throw new Error("Debe iniciar sesión para agregar productos al carrito")
     }
@@ -31,7 +31,7 @@ export async function addProductToCartFromQR(productId: string) {
     const userId = session.user.id
 
     // Verificar si el producto existe
-    const { data: product, error: productError } = await supabaseClient
+    const { data: product, error: productError } = await getBrowserClient
       .from("products")
       .select("id, name, price")
       .eq("id", productId)
@@ -42,7 +42,7 @@ export async function addProductToCartFromQR(productId: string) {
     }
 
     // --- Performance Improvement: Check if item already exists efficiently --- //
-    const { count: existingCount, error: checkError } = await supabaseClient
+    const { count: existingCount, error: checkError } = await getBrowserClient
       .from("cart_items")
       .select("id", { count: "exact", head: true }) // Efficient count query
       .eq("user_id", userId)
@@ -59,7 +59,7 @@ export async function addProductToCartFromQR(productId: string) {
     // --- End Performance Improvement --- //
 
     // Agregar el producto al carrito
-    const { error: insertError } = await supabaseClient.from("cart_items").insert({
+    const { error: insertError } = await getBrowserClient.from("cart_items").insert({
       user_id: userId,
       product_id: productId,
       quantity: 1, // Assuming quantity is always 1 when adding from QR

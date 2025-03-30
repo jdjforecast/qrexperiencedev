@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { CoinBalance } from "@/components/ui/coin-balance"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth/AuthProvider"
 

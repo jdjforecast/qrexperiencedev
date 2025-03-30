@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { createServerClient } from "@/lib/supabase"
+import { getServerClient } from "@/lib/supabase-client-server"
 import InvoiceDetail from "./invoice-detail"
 
 interface InvoicePageProps {
@@ -10,7 +10,7 @@ interface InvoicePageProps {
 
 export default async function InvoicePage({ params }: InvoicePageProps) {
   try {
-    const supabase = createServerClient()
+    const supabase = getServerClient()
 
     // Obtener la orden
     const { data: order, error } = await supabase

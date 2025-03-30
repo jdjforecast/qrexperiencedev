@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { LogOut, Home, ShoppingCart, User, Settings } from "lucide-react"
-import { supabaseClient } from "@/lib/supabase/client-utils"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/components/auth/AuthProvider"

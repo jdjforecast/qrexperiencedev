@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createSupabaseClient } from "@/lib/supabase/index"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import type { User } from "@supabase/supabase-js"
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createSupabaseClient()
+  const supabase = getBrowserClient()
 
   useEffect(() => {
     // Obtener sesión inicial

@@ -1,11 +1,11 @@
-import { createSupabaseClient } from "@/lib/supabase/index"
+import { getServerClient } from "@/lib/supabase-client-server"
 import { NextResponse } from "next/server"
 
 // Ruta específica para hacer administrador a ncastilo@outlook.com
 export async function GET() {
   try {
     const email = "ncastilo@outlook.com"
-    const supabase = createSupabaseClient({ admin: true })
+    const supabase = getServerClient({ admin: true })
 
     // Buscar el usuario por correo electrónico
     const { data: userData, error: userError } = await supabase.auth.admin.listUsers()

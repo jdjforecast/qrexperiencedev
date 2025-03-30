@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { createAdminClient } from "@/lib/supabase"
+import { getServerClient } from "@/lib/supabase-client-server"
 import { Button } from "@/components/ui/button"
 import { PlusCircle, Edit, Trash2 } from "lucide-react"
 
@@ -24,7 +24,7 @@ export default function ProductsList() {
     async function fetchProducts() {
       try {
         setLoading(true)
-        const supabase = createAdminClient()
+        const supabase = getServerClient()
 
         const { data, error } = await supabase
           .from("products")

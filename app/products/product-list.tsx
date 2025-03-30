@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { getCurrentUser, dataAPI } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
+import { getCurrentUser } from "@/lib/auth-utils"
 import type { User } from "@supabase/supabase-js"
 
 interface Product {
@@ -30,7 +31,7 @@ export default function ProductList({ products }: { products: Product[] }) {
 
           for (const product of products) {
             try {
-              const hasProduct = await dataAPI.hasUserProduct(user.id, product.id)
+              const hasProduct = await getBrowserClient.hasUserProduct(user.id, product.id)
               productStatus[product.id] = hasProduct
             } catch (err) {
               console.error(`Error checking product ${product.id}:`, err)

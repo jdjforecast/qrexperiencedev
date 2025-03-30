@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { ShoppingCart, X } from "lucide-react"
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { ProductImage } from "@/components/ProductImage"
 import { formatCurrency } from "@/lib/utils"
 

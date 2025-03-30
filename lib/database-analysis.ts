@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase"
+import { getServerClient } from "@/lib/supabase-client-server"
 
 export interface SchemaAnalysisResult {
   authUsers: number
@@ -19,7 +19,7 @@ export interface SchemaAnalysisResult {
  * This function requires admin privileges to access auth schema
  */
 export async function analyzeUserProfilesRelationship(): Promise<SchemaAnalysisResult> {
-  const supabase = createAdminClient()
+  const supabase = getServerClient()
 
   // Get all auth users
   const { data: authUsers, error: authError } = await supabase.from("auth.users").select("id, email")
@@ -73,7 +73,7 @@ export async function analyzeUserProfilesRelationship(): Promise<SchemaAnalysisR
  * @returns Number of profiles created
  */
 export async function createMissingProfiles(): Promise<number> {
-  const supabase = createAdminClient()
+  const supabase = getServerClient()
 
   // Get all auth users
   const { data: authUsers, error: authError } = await supabase
@@ -139,7 +139,7 @@ export async function checkProfilesTableStructure(): Promise<{
   hasForeignKeyConstraint: boolean
   missingColumns: string[]
 }> {
-  const supabase = createAdminClient()
+  const supabase = getServerClient()
 
   // Expected columns in profiles table
   const expectedColumns = ["id", "email", "full_name", "company_name", "role", "created_at", "updated_at"]
@@ -185,7 +185,7 @@ export async function checkProfilesTableStructure(): Promise<{
  * when a new user is created in auth.users
  */
 export async function createProfilesTriggerFunction(): Promise<boolean> {
-  const supabase = createAdminClient()
+  const supabase = getServerClient()
 
   // SQL to create the function and trigger
   const sql = `

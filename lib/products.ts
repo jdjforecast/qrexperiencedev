@@ -1,4 +1,4 @@
-import { createSupabaseClient } from "@/lib/supabase/index"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 
 // Interfaces para los productos
 export interface Product {
@@ -17,7 +17,7 @@ export interface Product {
  * Obtiene todos los productos
  */
 export async function getAllProducts(): Promise<Product[]> {
-  const supabase = createSupabaseClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.from("products").select("*").order("name")
 
@@ -33,7 +33,7 @@ export async function getAllProducts(): Promise<Product[]> {
  * Obtiene un producto por su ID
  */
 export async function getProductById(id: string): Promise<Product | null> {
-  const supabase = createSupabaseClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
 
@@ -49,7 +49,7 @@ export async function getProductById(id: string): Promise<Product | null> {
  * Obtiene un producto por su código
  */
 export async function getProductByCode(code: string): Promise<Product | null> {
-  const supabase = createSupabaseClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.from("products").select("*").eq("code", code).single()
 
@@ -97,7 +97,7 @@ export async function getProductByQRCode(
 export async function createProduct(
   productData: Omit<Product, "id">,
 ): Promise<{ success: boolean; product?: Product; error?: string }> {
-  const supabase = createSupabaseClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.from("products").insert(productData).select().single()
 
@@ -116,7 +116,7 @@ export async function updateProduct(
   id: string,
   productData: Partial<Product>,
 ): Promise<{ success: boolean; product?: Product; error?: string }> {
-  const supabase = createSupabaseClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.from("products").update(productData).eq("id", id).select().single()
 
@@ -132,7 +132,7 @@ export async function updateProduct(
  * Elimina un producto
  */
 export async function deleteProduct(id: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = createSupabaseClient()
+  const supabase = getBrowserClient()
 
   const { error } = await supabase.from("products").delete().eq("id", id)
 

@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase"
+import { getServerClient } from "@/lib/supabase-client-server"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     // Procesar el código de autenticación
     const cookieStore = cookies()
-    const supabase = createServerClient({
+    const supabase = getServerClient({
       get: (name) => {
         const cookie = cookieStore.get(name)
         return { value: cookie?.value }

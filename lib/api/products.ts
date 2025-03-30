@@ -1,4 +1,4 @@
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 
 /**
  * Obtiene un producto por su ID desde la base de datos

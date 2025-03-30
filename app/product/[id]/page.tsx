@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createSupabaseClient } from "@/lib/supabase/index"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { addProductToCartFromQR } from "@/lib/cart-service"
 import { useAuth } from "@/components/auth/AuthProvider"
 
@@ -25,7 +25,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       }
 
       try {
-        const supabase = createSupabaseClient()
+        const supabase = getBrowserClient()
         const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
 
         if (error || !data) {

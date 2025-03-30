@@ -1,9 +1,9 @@
-import { dataAPI } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import ProductList from "./product-list"
 
 export default async function ProductsPage() {
   try {
-    const products = await dataAPI.getAllProducts()
+    const products = await getBrowserClient.getAllProducts()
 
     return (
       <div className="container mx-auto py-8">

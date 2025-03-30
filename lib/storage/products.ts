@@ -1,4 +1,4 @@
-import { createClientClient } from "@/lib/supabase/client"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { createServerClient } from "../supabase"
 import type { Product } from "@/types/product"
 import { NewProductSchema } from "@/types/schemas"
@@ -46,7 +46,7 @@ export async function createProduct(productData: z.input<typeof NewProductSchema
 // Obtener todos los productos
 export async function getAllProducts() {
   try {
-    const supabase = createClientClient()
+    const supabase = getBrowserClient()
     console.log("Obteniendo lista de productos")
 
     const { data, error } = await supabase.from("products").select("*").order("name")
@@ -74,7 +74,7 @@ export async function getProductsByCategory(category: string) {
       return { data: [], error: new Error("Categoría no especificada") }
     }
 
-    const supabase = createClientClient()
+    const supabase = getBrowserClient()
     console.log(`Obteniendo productos de categoría: ${category}`)
 
     const { data, error } = await supabase.from("products").select("*").eq("category", category).order("name")
@@ -102,7 +102,7 @@ export async function getProductById(id: string) {
       return { data: null, error: new Error("ID de producto no especificado") }
     }
 
-    const supabase = createClientClient()
+    const supabase = getBrowserClient()
     console.log(`Obteniendo producto con ID: ${id}`)
 
     const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
@@ -230,7 +230,7 @@ export async function uploadProductImage(file: File, productId: string) {
       }
     }
 
-    const supabase = createClientClient()
+    const supabase = getBrowserClient()
     console.log(`Subiendo imagen para producto ID: ${productId}`)
 
     // Crear un nombre único para el archivo
@@ -371,7 +371,7 @@ export function generateFriendlyUrl(name: string, id: string): string {
  */
 export async function updateProductUrl(productId: string, name: string) {
   try {
-    const supabase = createClientClient()
+    const supabase = getBrowserClient()
 
     // Generar URL amigable
     const friendlyUrl = generateFriendlyUrl(name, productId)

@@ -1,10 +1,12 @@
-import { createBrowserClient } from "./supabase-client"
+"use client"
+
+import { getBrowserClient } from "./supabase-client-browser"
 
 /**
  * Obtiene el perfil de usuario por ID
  */
 export async function getUserProfile(userId: string) {
-  const supabase = createBrowserClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
@@ -20,7 +22,7 @@ export async function getUserProfile(userId: string) {
  * Actualiza el perfil de usuario
  */
 export async function updateUserProfile(userId: string, profileData: any) {
-  const supabase = createBrowserClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.from("profiles").update(profileData).eq("id", userId).select()
 
@@ -36,7 +38,7 @@ export async function updateUserProfile(userId: string, profileData: any) {
  * Registra un nuevo usuario
  */
 export async function registerUser(email: string, password: string, userData: any) {
-  const supabase = createBrowserClient()
+  const supabase = getBrowserClient()
 
   // Registrar usuario en Auth
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -80,7 +82,7 @@ export async function registerUser(email: string, password: string, userData: an
  * Alias para la función signIn para mantener consistencia en la nomenclatura
  */
 export async function loginUser(email: string, password: string) {
-  const supabase = createBrowserClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -99,7 +101,7 @@ export async function loginUser(email: string, password: string) {
  * Cierra la sesión del usuario actual
  */
 export async function logoutUser() {
-  const supabase = createBrowserClient()
+  const supabase = getBrowserClient()
   const { error } = await supabase.auth.signOut()
 
   if (error) {
@@ -114,7 +116,7 @@ export async function logoutUser() {
  * Obtiene el carrito de compras del usuario
  */
 export async function getUserCart(userId: string) {
-  const supabase = createBrowserClient()
+  const supabase = getBrowserClient()
 
   const { data, error } = await supabase
     .from("cart_items")

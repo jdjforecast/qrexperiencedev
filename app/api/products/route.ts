@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { createProduct, getAllProducts } from "@/lib/products"
-import { createSupabaseClient } from "@/lib/supabase/index"
+import { getServerClient } from "@/lib/supabase-client-server"
 
 // GET Handler to fetch all products (Admin only)
 export async function GET(request: Request) {
   try {
     // Verificar autenticación con Supabase
-    const supabase = createSupabaseClient()
+    const supabase = getServerClient()
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     // Verificar autenticación con Supabase
-    const supabase = createSupabaseClient()
+    const supabase = getServerClient()
     const {
       data: { session },
     } = await supabase.auth.getSession()

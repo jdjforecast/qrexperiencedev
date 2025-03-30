@@ -2,10 +2,9 @@
  * Servicio centralizado para operaciones con productos
  */
 
-import { createBrowserClient } from "./supabase-client"
-import { createServerClient } from "./auth"
+import { getBrowserClient } from "./supabase-client-browser"
+import { getServerClient } from "./supabase-client-server"
 import type { Product } from "./db-schema"
-import { createClientClient } from "@/lib/supabase/client"
 import type { ProductData } from "@/types/cart"
 import { ProductDataSchema } from "@/types/schemas"
 
@@ -14,7 +13,7 @@ import { ProductDataSchema } from "@/types/schemas"
  */
 export async function getAllProducts(): Promise<{ products: Product[]; error: Error | null }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = getServerClient()
     const { data, error } = await supabase.from("products").select("*").order("name")
 
     if (error) {
@@ -37,7 +36,7 @@ export async function getAllProducts(): Promise<{ products: Product[]; error: Er
  */
 export async function getProduct(id: string): Promise<{ product: Product | null; error: Error | null }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = getServerClient()
     const { data: product, error } = await supabase
       .from("products")
       .select("*")
@@ -65,7 +64,7 @@ export async function getProduct(id: string): Promise<{ product: Product | null;
  */
 export async function getProductsByCategory(category: string): Promise<{ products: Product[]; error: Error | null }> {
   try {
-    const supabase = await createServerClient()
+    const supabase = getServerClient()
     const { data, error } = await supabase.from("products").select("*").eq("category", category).order("name")
 
     if (error) {
@@ -91,7 +90,7 @@ export async function updateProductUrl(
   name: string,
 ): Promise<{ success: boolean; error: Error | null }> {
   try {
-    const supabase = createBrowserClient()
+    const supabase = getBrowserClient()
 
     let urlpage = name
       .toLowerCase()
@@ -127,7 +126,7 @@ export async function updateProductUrl(
  */
 export async function generateMissingProductUrls(): Promise<{ success: boolean; count: number; error: Error | null }> {
   try {
-    const supabase = createBrowserClient()
+    const supabase = getBrowserClient()
 
     const { data: products, error: fetchError } = await supabase.from("products").select("id, name").is("urlpage", null)
 
@@ -182,7 +181,7 @@ export async function generateMissingProductUrls(): Promise<{ success: boolean; 
  * Uses shared ProductData type and Zod validation.
  */
 export async function getProductClientSide(idOrUrl: string): Promise<ProductFetchResult> {
-  const supabase = createClientClient()
+  const supabase = getBrowserClient()
   try {
     const { data, error } = await supabase
       .from("products")

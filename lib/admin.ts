@@ -1,5 +1,5 @@
 import { createServerClient } from "./supabase"
-import { createClientClient } from "@/lib/supabase/client"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import type { AdminOrder } from "@/types/order"
 import { AdminOrdersArraySchema } from "@/types/schemas"
 
@@ -16,7 +16,7 @@ type AdminOrdersFetchResult = { success: true; data: AdminOrder[] } | { success:
 
 // Refactored getAllOrders for client-side usage with detailed select and validation
 export async function getAllOrders(): Promise<AdminOrdersFetchResult> {
-  const supabase = createClientClient() // Use client-side instance
+  const supabase = getBrowserClient() // Use client-side instance
   try {
     const { data, error } = await supabase
       .from("orders")

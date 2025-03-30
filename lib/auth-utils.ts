@@ -2,8 +2,9 @@
  * Utilidades para autenticación y manejo de roles
  */
 
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import type { User } from "@supabase/supabase-js"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 /**
  * Verifica si un usuario tiene rol de administrador
@@ -106,6 +107,25 @@ export async function getUserProfile(userId: string): Promise<any | null> {
     return data
   } catch (error) {
     console.error(`Error getting profile for user ${userId}:`, error)
+    return null
+  }
+}
+
+/**
+ * Obtiene el usuario actual de la sesión
+ * @param supabase Cliente de Supabase (browser o server)
+ * @returns Promise<User | null> Usuario actual o null si no hay sesión
+ */
+export async function getCurrentUser(supabase: SupabaseClient): Promise<User | null> {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error) {
+      console.error("Error getting current user:", error)
+      return null
+    }
+    return user
+  } catch (error) {
+    console.error("Error getting current user:", error)
     return null
   }
 }

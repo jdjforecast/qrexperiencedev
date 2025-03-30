@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { dataAPI } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import ProductDetail from "./product-detail"
 
 interface ProductPageProps {
@@ -10,7 +10,7 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   try {
-    const product = await dataAPI.getProductById(params.id)
+    const product = await getBrowserClient.getProductById(params.id)
 
     if (!product) {
       return notFound()
