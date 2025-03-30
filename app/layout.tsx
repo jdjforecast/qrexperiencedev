@@ -1,8 +1,8 @@
 import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
-import { Navbar } from "@/components/Navbar"
-import { Footer } from "@/components/Footer"
+import { AppHeader } from "@/components/AppHeader"
+import { AppFooter } from "@/components/AppFooter"
 import { AuthProvider } from "@/components/auth/AuthProvider"
 import { Toaster } from "@/components/ui/toaster"
 import { Inter } from "next/font/google"
@@ -20,16 +20,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const activeTab = "unknown"; // Placeholder
+
   return (
     <html lang="es" className="h-full">
       <body className={`${inter.className} min-h-screen`}>
         <AuthProvider>
           <div className="flex flex-col min-h-screen">
-            <Navbar />
+            <AppHeader />
             <main className="flex-grow container mx-auto px-4 py-8 pt-20">
               {children}
             </main>
-            <Footer />
+            <AppFooter activeTab={activeTab} />
           </div>
           <Toaster />
         </AuthProvider>
