@@ -62,6 +62,11 @@ export async function middleware(req: NextRequest) {
     }
   }
   
+  // Redirigir rutas redundantes
+  if (pathname === '/scanner') {
+    return NextResponse.redirect(new URL('/scan', req.url))
+  }
+  
   return res;
 }
 

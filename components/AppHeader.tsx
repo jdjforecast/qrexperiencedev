@@ -1,16 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { CoinBalance } from "@/components/ui/coin-balance"
-import { ArrowLeft, ShoppingCart, Menu, X, QrCode, LogIn, UserCircle, LogOut, Home, Package } from "lucide-react"
+import { 
+  ArrowLeft, ShoppingCart, Menu, X, QrCode, 
+  LogIn, UserCircle, LogOut, Home, Package
+} from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NestleLogo } from "@/components/ui/nestle-logo"
 import { PharmaSummitLogo } from "@/components/ui/pharma-summit-logo"
 import { useScanner } from "@/contexts/scanner-context"
-import { useAuth } from "@/components/auth/AuthProvider"
+import { useAuth } from "@/hooks/auth"
 import { useToast } from "@/components/ui/use-toast"
 
 /**
@@ -55,7 +58,7 @@ function CartButton({ count = 0, onClick }: { count: number; onClick: () => void
       <ShoppingCart className="h-6 w-6" />
       {count > 0 && (
         <span
-          className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
+          className="absolute -top-1 -right-1 bg-error text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse-light"
           aria-hidden="true"
         >
           {count}
@@ -70,7 +73,13 @@ function CartButton({ count = 0, onClick }: { count: number; onClick: () => void
  */
 function ScanButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="ghost" size="icon" className="relative" onClick={onClick} aria-label="Escanear código QR">
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      className="relative hover:bg-white/10 transition-colors" 
+      onClick={onClick} 
+      aria-label="Escanear código QR"
+    >
       <QrCode className="h-6 w-6" />
     </Button>
   )
@@ -111,11 +120,16 @@ function SideMenu({
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Menú principal">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="hover:bg-white/10 transition-colors" 
+          aria-label="Menú principal"
+        >
           <Menu className="h-6 w-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="bg-[#3E5B99]/90 backdrop-blur-md border-white/10">
+      <SheetContent side="right" className="bg-primary/95 backdrop-blur-md border-white/10 w-full max-w-xs sm:max-w-sm">
         <div className="flex flex-col h-full">
           <div className="flex justify-between items-center mb-6">
             <PharmaSummitLogo width={180} height={60} />
@@ -124,7 +138,7 @@ function SideMenu({
             </Button>
           </div>
 
-          <nav className="flex flex-col gap-2" aria-label="Navegación principal">
+          <nav className="flex flex-col gap-2 animate-fade-in" aria-label="Navegación principal">
             {menuItems.map((item, index) =>
               item.href ? (
                 <Link
@@ -168,7 +182,7 @@ function SideMenu({
                 <button
                   onClick={onLogout}
                   disabled={isLoggingOut}
-                  className="p-3 rounded-lg hover:bg-red-500/20 text-left transition-colors flex items-center text-white mt-auto"
+                  className="mt-6 p-3 rounded-lg bg-error/20 hover:bg-error/30 text-left transition-colors flex items-center text-white"
                 >
                   {isLoggingOut ? (
                     <>
@@ -187,6 +201,7 @@ function SideMenu({
               </>
             ) : (
               <>
+                <div className="border-t border-white/10 my-4"></div>
                 {unauthenticatedItems.map((item, index) => (
                   <Link
                     key={`unauth-${index}`}
@@ -201,6 +216,11 @@ function SideMenu({
               </>
             )}
           </nav>
+          
+          <div className="mt-auto text-center pt-4 border-t border-white/10 text-xs opacity-70">
+            <p>© 2024 Mi Partner App</p>
+            <p>Developed by KOROVA MB</p>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
@@ -209,8 +229,6 @@ function SideMenu({
 
 /**
  * Componente principal del encabezado de la aplicación
- * @param {AppHeaderProps} props - Propiedades del componente
- * @returns {JSX.Element} Componente de encabezado
  */
 export function AppHeader({
   title,
@@ -224,7 +242,19 @@ export function AppHeader({
   const { user, profile, signOut, isAuthenticated } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const { toast } = useToast()
+
+  // Manejar evento de scroll para cambiar el estilo del header
+  const handleScroll = useCallback(() => {
+    const scrollPosition = window.scrollY
+    setIsScrolled(scrollPosition > 10)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [handleScroll])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -246,21 +276,28 @@ export function AppHeader({
   const currentCoins = profile?.coins ?? null
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-gradient-to-r from-[#0033A0] to-[#0055B8]/90 backdrop-blur-md border-b border-white/10 shadow-sm">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header 
+      className={`fixed top-0 left-0 right-0 z-30 w-full transition-all duration-300 backdrop-blur-sm ${
+        isScrolled 
+        ? "bg-primary/95 shadow-md py-2" 
+        : "bg-primary/85 py-3"
+      }`}
+    >
+      <div className="container-wide flex items-center justify-between">
         <div className="flex items-center">
           {showBackButton && <BackButton onClick={handleBackClick} />}
-          {title ? (
-            <h1 className="text-lg font-semibold text-white truncate pr-2">{title}</h1>
-          ) : (
-            <Link href="/" className="flex items-center">
-              <PharmaSummitLogo width={150} height={50} />
-            </Link>
-          )}
+          <Link href="/" className="flex items-center">
+            <PharmaSummitLogo width={140} height={40} />
+          </Link>
         </div>
 
-        <div className="flex items-center gap-2">
-          {isAuthenticated && <CoinBalance coins={currentCoins} />}
+        <div className="flex items-center space-x-1">
+          {isAuthenticated && currentCoins !== null && (
+            <div className="mr-1">
+              <CoinBalance coins={currentCoins} />
+            </div>
+          )}
+          <ScanButton onClick={openScanner} />
           <CartButton count={cartCount} onClick={handleCartClick} />
           <SideMenu
             isOpen={isMenuOpen}
@@ -272,6 +309,12 @@ export function AppHeader({
           />
         </div>
       </div>
+      
+      {title && (
+        <div className="w-full text-center mt-1 pb-1">
+          <h1 className="text-lg font-semibold animate-fade-in">{title}</h1>
+        </div>
+      )}
     </header>
   )
 }

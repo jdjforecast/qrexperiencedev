@@ -2,119 +2,182 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth/AuthProvider"
+import { useAuth } from "@/hooks/auth"
 import RouteGuard from "@/components/auth/route-guard"
-import { getProductByCode } from "@/lib/products"
+import { QRScanner } from "@/components/ui/qr-scanner"
+import { QRResult } from "@/components/ui/qr-result"
+import { 
+  PageTemplate, 
+  PageContent, 
+  SectionTitle, 
+  ErrorMessage, 
+  LoadingMessage, 
+  Card 
+} from "@/components/ui/page-template"
+import { PageTransition, AnimateOnView } from "@/components/ui/page-transition"
+import { getProductByQRCode, type Product } from "@/lib/products"
 import { addToCart } from "@/lib/cart"
-import LoadingSpinner from "@/components/ui/loading-spinner"
+import { toast } from "react-hot-toast"
+import { QrCode } from "lucide-react"
 
 export default function ScanPage() {
   const router = useRouter()
-  const { user } = useAuth()
-  const [isScanning, setIsScanning] = useState(false)
+  const { user, isAuthenticated } = useAuth()
+  const [isScanning, setIsScanning] = useState(true)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [scannedProduct, setScannedProduct] = useState<Product | null>(null)
 
-  // Simulación de escaneo de código para la demo
-  const simulateScan = async () => {
-    if (!user) return
+  const handleScan = async (qrContent: string) => {
+    if (!isAuthenticated || !user) {
+      setError("Para guardar productos, debes iniciar sesión")
+      setIsScanning(false)
+      return
+    }
 
-    setIsScanning(true)
+    setIsProcessing(true)
     setError(null)
 
     try {
-      // Simular un retraso de escaneo
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Procesar el código QR para obtener información del producto
+      const result = await getProductByQRCode(qrContent)
 
-      // Código de producto simulado
-      const productCode = "PROD123"
-
-      // Obtener producto por código
-      const productResult = await getProductByCode(productCode)
-
-      if (!productResult?.success || !productResult?.data) {
-        setError(productResult?.error || "Producto no encontrado")
+      if (!result.success || !result.data) {
+        setError(result.error || "Código QR no válido o no encontrado")
+        setIsScanning(false)
         return
       }
 
-      // Agregar al carrito
-      const cartResult = await addToCart(user.id, productResult.data.id)
-
-      if (cartResult.success) {
-        setSuccess(true)
-        // Redirigir al carrito después de un breve retraso
-        setTimeout(() => {
-          router.push("/cart")
-        }, 2000)
-      } else {
-        setError(cartResult.error || "Error al agregar al carrito")
+      // Verificar stock antes de continuar
+      if (result.data.product.stock <= 0) {
+        setError("Lo sentimos, este producto está agotado")
+        setIsScanning(false)
+        return
       }
-    } catch (err) {
-      console.error("Error al escanear código:", err)
-      setError("Error inesperado al escanear el código")
-    } finally {
+
+      // Verificar límite por usuario si existe
+      if (result.data.product.max_per_user) {
+        // Aquí iría la lógica para verificar límite por usuario
+        // Omitido para simplificar
+      }
+
+      // Producto escaneado correctamente
+      setScannedProduct(result.data.product)
       setIsScanning(false)
+    } catch (err) {
+      console.error("Error scanning QR code:", err)
+      setError(err instanceof Error ? err.message : "Error al procesar el código QR")
+      setIsScanning(false)
+    } finally {
+      setIsProcessing(false)
     }
+  }
+
+  const handleAddToCart = async (product: Product, quantity: number) => {
+    if (!user) return
+
+    try {
+      const result = await addToCart(user.id, product.id, quantity)
+
+      if (!result.success) {
+        throw new Error(result.error || "Error al agregar el producto al carrito")
+      }
+
+      toast.success(`${product.name} agregado al carrito`)
+      
+      // Redireccionar al carrito después de un breve retraso
+      setTimeout(() => {
+        router.push("/cart")
+      }, 1000)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al agregar al carrito")
+      throw error; // Re-lanzar el error para que el componente QRResult pueda manejarlo
+    }
+  }
+
+  const handleScanError = (errorMessage: string) => {
+    console.warn("QR scan error:", errorMessage)
+  }
+
+  const restartScan = () => {
+    setScannedProduct(null)
+    setError(null)
+    setIsScanning(true)
   }
 
   return (
     <RouteGuard>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">Escanear Código</h1>
-
-        <div className="mx-auto max-w-md rounded-lg border p-6 shadow-md">
-          {isScanning ? (
-            <div className="text-center">
-              <LoadingSpinner />
-              <p className="mt-4 text-gray-600">Escaneando código...</p>
-            </div>
-          ) : error ? (
-            <div className="rounded-md bg-red-50 p-4 text-red-700">
-              <p className="font-medium">Error</p>
-              <p>{error}</p>
-              <button
-                onClick={() => setError(null)}
-                className="mt-4 rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-              >
-                Intentar de nuevo
-              </button>
-            </div>
-          ) : success ? (
-            <div className="rounded-md bg-green-50 p-4 text-green-700">
-              <p className="font-medium">¡Producto agregado al carrito!</p>
-              <p>Redirigiendo al carrito...</p>
-            </div>
-          ) : (
-            <div className="text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="h-48 w-48 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    className="h-16 w-16 text-gray-400"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                    />
-                  </svg>
+      <PageTemplate 
+        title="ESCANEAR QR" 
+        showBackButton={true} 
+        activeTab="scanner"
+      >
+        <PageContent>
+          <PageTransition type="slide-up">
+            {isScanning ? (
+              <Card>
+                <div className="text-center mb-4">
+                  <QrCode className="h-8 w-8 mx-auto mb-2 text-white/80" />
+                  <SectionTitle 
+                    title="Escanea un Código QR" 
+                    subtitle="Apunta a un código QR para agregar productos a tu carrito" 
+                    className="text-center"
+                  />
                 </div>
-              </div>
-              <p className="mb-4 text-gray-600">Ingresa el código del producto para agregarlo al carrito.</p>
-              <button
-                onClick={simulateScan}
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-              >
-                Escanear Código
-              </button>
-            </div>
+                
+                {isProcessing ? (
+                  <LoadingMessage message="Procesando código QR..." />
+                ) : (
+                  <div className="rounded-lg overflow-hidden">
+                    <QRScanner 
+                      onScan={handleScan} 
+                      onError={handleScanError}
+                      config={{
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 }
+                      }}
+                    />
+                  </div>
+                )}
+              </Card>
+            ) : error ? (
+              <ErrorMessage 
+                message={error}
+                onRetry={restartScan}
+              />
+            ) : scannedProduct ? (
+              <QRResult 
+                product={scannedProduct}
+                onAddToCart={handleAddToCart}
+                onScanAgain={restartScan}
+              />
+            ) : null}
+          </PageTransition>
+          
+          {/* Instrucciones para el usuario */}
+          {isScanning && !isProcessing && (
+            <AnimateOnView type="fade" delay={0.3}>
+              <Card solid className="mt-6 p-4">
+                <h3 className="font-medium mb-2 text-white">Consejos para escanear:</h3>
+                <ul className="text-sm text-white/80 space-y-2">
+                  <li className="flex items-start">
+                    <span className="inline-block w-4 h-4 bg-primary-light rounded-full mr-2 mt-0.5 flex-shrink-0"></span>
+                    Asegúrate de que hay buena iluminación
+                  </li>
+                  <li className="flex items-start">
+                    <span className="inline-block w-4 h-4 bg-primary-light rounded-full mr-2 mt-0.5 flex-shrink-0"></span>
+                    Mantén la cámara estable y enfocada
+                  </li>
+                  <li className="flex items-start">
+                    <span className="inline-block w-4 h-4 bg-primary-light rounded-full mr-2 mt-0.5 flex-shrink-0"></span>
+                    Coloca el código QR dentro del marco
+                  </li>
+                </ul>
+              </Card>
+            </AnimateOnView>
           )}
-        </div>
-      </div>
+        </PageContent>
+      </PageTemplate>
     </RouteGuard>
   )
 }

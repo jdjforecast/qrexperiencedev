@@ -1,179 +1,166 @@
 "use client"
-import { Check, AlertCircle, Coins, ShoppingCart } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
-import { formatCurrency } from "@/lib/utils"
 
-type QRResultProps = {
-  result: {
-    success: boolean
-    message: string
-    type?: "product" | "coins"
-    data?: any
-  } | null
-  userId: string | null
-  onLogin: () => void
-  onClose: () => void
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Loader2, ShoppingCart, Tag, Check } from "lucide-react"
+import type { Product } from "@/lib/products"
+
+interface QRResultProps {
+  product: Product
+  onAddToCart: (product: Product, quantity: number) => Promise<void>
   onScanAgain: () => void
-  onAddToCart?: () => Promise<void>
-  isProcessing?: boolean
 }
 
-export function QRResult({
-  result,
-  userId,
-  onLogin,
-  onClose,
-  onScanAgain,
-  onAddToCart,
-  isProcessing = false,
-}: QRResultProps) {
-  if (!result) return null
+export function QRResult({ product, onAddToCart, onScanAgain }: QRResultProps) {
+  const [quantity, setQuantity] = useState(1)
+  const [isAdding, setIsAdding] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
 
-  const showProductDetails = result.success && result.type === "product" && result.data?.product
-
-  // Resultado exitoso
-  if (result.success) {
-    // Monedas escaneadas
-    if (result.type === "coins" && result.data?.coins) {
-      return (
-        <div className="text-center">
-          <div className="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Coins className="h-10 w-10 text-yellow-500" />
-          </div>
-          <h3 className="text-xl font-bold mb-2">{result.message}</h3>
-          <p className="text-blue-100 mb-6">Has escaneado un código de monedas</p>
-
-          <Button onClick={onScanAgain} className="w-full">
-            Escanear otro código
-          </Button>
-        </div>
-      )
+  const handleAddToCart = async () => {
+    if (isAdding) return
+    
+    setIsAdding(true)
+    try {
+      await onAddToCart(product, quantity)
+      setIsSuccess(true)
+      
+      // Reset después de mostrar el mensaje de éxito
+      setTimeout(() => {
+        setIsSuccess(false)
+      }, 2000)
+    } finally {
+      setIsAdding(false)
     }
+  }
 
-    // Producto escaneado
-    if (result.type === "product" && result.data?.product) {
-      const product = result.data.product
+  const adjustQuantity = (amount: number) => {
+    const newQty = quantity + amount
+    if (newQty >= 1 && newQty <= (product.max_per_user || 10)) {
+      setQuantity(newQty)
+    }
+  }
 
-      return (
-        <div>
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
-              <Check className="h-6 w-6 text-green-500" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-lg font-bold">¡Producto encontrado!</h3>
-              <p className="text-sm text-blue-200">Listo para agregar al carrito</p>
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  return (
+    <div className="card fade-in">
+      <div className="relative">
+        {isSuccess && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg z-10 animate-fade-in">
+            <div className="bg-success/20 backdrop-blur-md p-4 rounded-full">
+              <Check className="h-10 w-10 text-success" />
             </div>
           </div>
-
-          {/* Detalles del producto */}
-          <div className="bg-blue-900/30 rounded-lg p-3 mb-4">
-            <div className="flex items-center">
-              {product.image_url ? (
-                <div className="w-16 h-16 rounded-md overflow-hidden mr-3 bg-white/10 flex items-center justify-center">
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    width={64}
-                    height={64}
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <div className="w-16 h-16 rounded-md overflow-hidden mr-3 bg-white/10 flex items-center justify-center">
-                  <ShoppingCart className="h-6 w-6 text-white/50" />
-                </div>
-              )}
-              <div className="flex-1">
-                <h4 className="font-bold">{product.name}</h4>
-                <p className="text-sm text-blue-200">{formatCurrency(product.price)}</p>
-                {product.stock > 0 && (
-                  <div className="mt-1 flex items-center">
-                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">
-                      {product.stock} en stock
-                    </span>
-                    {product.max_per_user && (
-                      <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded ml-2">
-                        Máx: {product.max_per_user}
-                      </span>
-                    )}
-                  </div>
+        )}
+        
+        <div className="text-center mb-3">
+          <h3 className="text-xl font-bold text-white">Producto Escaneado</h3>
+          <div className="h-0.5 w-20 bg-white/20 mx-auto mt-2"></div>
+        </div>
+        
+        <div className="bg-white/10 rounded-lg p-4 mb-4">
+          <div className="flex items-center mb-4">
+            {product.image_url ? (
+              <div className="w-20 h-20 mr-4 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
+                <img 
+                  src={product.image_url} 
+                  alt={product.name} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.src = "/images/placeholder.png" }}
+                />
+              </div>
+            ) : (
+              <div className="w-20 h-20 mr-4 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
+                <Tag className="h-8 w-8 text-white/50" />
+              </div>
+            )}
+            <div>
+              <h4 className="font-bold text-lg">{product.name}</h4>
+              <div className="flex items-center">
+                <span className="text-xl font-bold text-white">
+                  {formatPrice(product.price)}
+                </span>
+                {product.stock <= 5 && (
+                  <span className="ml-2 text-xs bg-warning/20 text-warning px-2 py-0.5 rounded-full">
+                    {product.stock} disponibles
+                  </span>
                 )}
               </div>
             </div>
           </div>
-
-          <div className="space-y-2">
-            <Button onClick={onAddToCart} disabled={isProcessing} className="w-full">
-              {isProcessing ? (
-                <span className="flex items-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Agregando...
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Agregar al carrito
-                </span>
-              )}
-            </Button>
-
-            <Button variant="outline" onClick={onScanAgain} className="w-full">
-              Escanear otro código
-            </Button>
+          
+          {product.description && (
+            <p className="text-white/80 text-sm mb-4 border-l-2 border-white/20 pl-3">{product.description}</p>
+          )}
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => adjustQuantity(-1)}
+                disabled={quantity <= 1 || isAdding}
+                className="h-8 w-8 p-0 text-white"
+              >
+                -
+              </Button>
+              <span className="w-10 text-center font-medium">{quantity}</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => adjustQuantity(1)}
+                disabled={
+                  (product.max_per_user && quantity >= product.max_per_user) || 
+                  isAdding
+                }
+                className="h-8 w-8 p-0 text-white"
+              >
+                +
+              </Button>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-white/70">Total:</div>
+              <div className="font-bold text-white">
+                {formatPrice(product.price * quantity)}
+              </div>
+            </div>
           </div>
         </div>
-      )
-    }
-
-    // Éxito genérico (caso poco común)
-    return (
-      <div className="text-center">
-        <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Check className="h-8 w-8 text-green-500" />
+        
+        <div className="flex space-x-3">
+          <Button 
+            onClick={onScanAgain}
+            variant="outline" 
+            className="flex-1 border-white/30 hover:bg-white/10"
+            disabled={isAdding}
+          >
+            Escanear otro
+          </Button>
+          <Button 
+            onClick={handleAddToCart} 
+            className="flex-1 bg-primary-light hover:bg-primary-dark"
+            disabled={isAdding}
+          >
+            {isAdding ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Agregando...
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Agregar
+              </>
+            )}
+          </Button>
         </div>
-        <h3 className="text-xl font-bold mb-2">{result.message}</h3>
-
-        <Button onClick={onScanAgain} className="w-full mt-4">
-          Escanear otro código
-        </Button>
       </div>
-    )
-  }
-
-  // Resultado de error
-  return (
-    <div className="text-center">
-      <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-        <AlertCircle className="h-8 w-8 text-red-500" />
-      </div>
-      <h3 className="text-xl font-bold text-red-300 mb-2">Ocurrió un error</h3>
-      <p className="text-blue-100 mb-6">{result.message}</p>
-
-      <Button onClick={onScanAgain} className="w-full">
-        Intentar de nuevo
-      </Button>
     </div>
   )
 }

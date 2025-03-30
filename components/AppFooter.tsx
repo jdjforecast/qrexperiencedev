@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { Button } from "@/components/ui/button"
-import { QrCode, ShoppingCart, User } from "lucide-react"
+import { QrCode, ShoppingCart, User, Home } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { NestleLogo } from "@/components/ui/nestle-logo"
 import { useScanner } from "@/contexts/scanner-context"
@@ -66,12 +66,18 @@ function NavButton({ icon, label, isActive, onClick }: NavButtonProps) {
   return (
     <Button
       variant="ghost"
-      className={`flex flex-col items-center ${isActive ? "text-white" : "text-white/70"}`}
+      className={`relative flex flex-col items-center justify-center h-14 ${
+        isActive 
+        ? "text-white nav-active" 
+        : "text-white/70 hover:text-white"
+      }`}
       onClick={onClick}
       aria-label={label}
       aria-pressed={isActive}
     >
-      {icon}
+      <div className={`${isActive ? "scale-110" : ""} transition-transform duration-200`}>
+        {icon}
+      </div>
       <span className="text-xs mt-1">{label}</span>
     </Button>
   )
@@ -92,13 +98,23 @@ export function AppFooter({ activeTab, onTabChange }: AppFooterProps) {
   // Controlador de scroll optimizado con useCallback
   const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY
+    const threshold = 50
 
     // Si estamos al principio de la página, siempre mostrar el footer
-    if (currentScrollY < 100) {
+    if (currentScrollY < threshold) {
       setIsVisible(true)
-    } else {
-      // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
-      setIsVisible(currentScrollY < lastScrollY || currentScrollY < 50)
+      return
+    }
+
+    // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
+    if (
+      (currentScrollY < lastScrollY && currentScrollY > threshold) || 
+      // Siempre mostrar cuando llegamos cerca del final de la página
+      (window.innerHeight + currentScrollY) >= document.body.offsetHeight - 100
+    ) {
+      setIsVisible(true)
+    } else if (currentScrollY > lastScrollY && currentScrollY > threshold) {
+      setIsVisible(false)
     }
 
     setLastScrollY(currentScrollY)
@@ -122,6 +138,9 @@ export function AppFooter({ activeTab, onTabChange }: AppFooterProps) {
     } else {
       // Navegar a la página correspondiente
       switch (tab) {
+        case "home":
+          router.push("/")
+          break
         case "cart":
           router.push("/cart")
           break
@@ -134,6 +153,12 @@ export function AppFooter({ activeTab, onTabChange }: AppFooterProps) {
 
   // Configuración de los botones de navegación
   const navButtons = [
+    {
+      id: "home",
+      label: "Inicio",
+      icon: <Home className="h-6 w-6" aria-hidden="true" />,
+      onClick: () => handleTabChange("home"),
+    },
     {
       id: "scanner",
       label: "Escanear",
@@ -155,34 +180,10 @@ export function AppFooter({ activeTab, onTabChange }: AppFooterProps) {
   ]
 
   return (
-    <div className="flex flex-col">
-      {/* Pie de página con información de copyright */}
-      <div className="bg-[#0033A0]/80 backdrop-blur-md border-t border-white/10 p-4 text-center text-white/70 text-xs">
-        <div className="max-w-6xl mx-auto flex flex-col items-center">
-          <NestleLogo width={70} height={28} className="mb-2" />
-          <p className="mb-3">
-            Una experiencia{" "}
-            <Link
-              href="https://mipartner.com.co/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-200 hover:text-white transition-colors"
-            >
-              Mipartner
-            </Link>
-            , developed by Jaime Forero Castillo
-          </p>
-          <div className="flex items-center justify-center">
-            <span className="font-bold">KOROVA MB</span>
-            <MilkBoxIcon className="h-4 w-4 ml-1" />
-            <span className="ml-2">all rights reserved 2025</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Barra de navegación inferior */}
-      <footer
-        className={`bg-[#0055B8]/50 backdrop-blur-md border-t border-white/10 p-2 fixed bottom-0 w-full z-20 transition-transform duration-300 ease-in-out ${
+    <>
+      {/* Barra de navegación inferior para móviles */}
+      <nav
+        className={`md:hidden fixed bottom-0 left-0 right-0 bg-primary/95 backdrop-blur-md border-t border-white/20 z-30 transition-transform duration-300 ease-in-out ${
           isVisible ? "translate-y-0" : "translate-y-full"
         }`}
         aria-label="Navegación principal"
@@ -199,8 +200,26 @@ export function AppFooter({ activeTab, onTabChange }: AppFooterProps) {
             />
           ))}
         </div>
+      </nav>
+
+      {/* Pie de página con información de copyright - visible en todos los tamaños */}
+      <footer className="bg-primary-dark/80 backdrop-blur-md border-t border-white/10 p-4 text-center text-white/70 text-xs mt-auto">
+        <div className="container mx-auto">
+          <p className="mb-1">
+            Una experiencia{" "}
+            <Link
+              href="https://mipartner.com.co/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-200 hover:text-white transition-colors"
+            >
+              Mipartner
+            </Link>
+          </p>
+          <p>© 2024 KOROVA MB. Todos los derechos reservados.</p>
+        </div>
       </footer>
-    </div>
+    </>
   )
 }
 

@@ -75,9 +75,29 @@ export async function getProductByCode(code: string): Promise<Product | null> {
 /**
  * Obtiene un producto por su código QR
  */
-export async function getProductByQRCode(qrCode: string): Promise<Product | null> {
-  // Asumiendo que el código QR es igual al campo 'code' del producto
-  return getProductByCode(qrCode);
+export async function getProductByQRCode(qrCode: string): Promise<{ success: boolean; data?: { product: Product, coinsValue?: number }; error?: string }> {
+  try {
+    const product = await getProductByCode(qrCode);
+    
+    if (!product) {
+      return { 
+        success: false, 
+        error: "Producto no encontrado para el código QR proporcionado" 
+      };
+    }
+    
+    return { 
+      success: true, 
+      data: { 
+        product,
+        coinsValue: 0 // Siempre 0 para esta implementación simple
+      }
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Error al obtener el producto por código QR";
+    console.error(errorMessage, error);
+    return { success: false, error: errorMessage };
+  }
 }
 
 /**
