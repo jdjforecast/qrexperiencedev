@@ -3,7 +3,6 @@
 import { useRef, useState, useEffect } from "react"
 import { Html5QrcodeScanner } from "html5-qrcode"
 import { useAuth } from "@/hooks/auth"
-import { createClientClient } from "@/lib/supabase/client"
 import { trackQRScan, getDeviceInfo } from "@/lib/tracking/qr-events"
 import { getProductClientSide } from "@/lib/product-service"
 import { toast } from "react-hot-toast"
@@ -40,7 +39,6 @@ export default function QrScanner({
   const [quantity, setQuantity] = useState(1)
 
   const { user } = useAuth()
-  const supabase = createClientClient()
   const scannerRef = useRef<Html5QrcodeScanner | null>(null)
   const scanAttempts = useRef(0)
 
