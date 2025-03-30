@@ -14,15 +14,10 @@ const nextConfig = {
   },
   experimental: {
     serverActions: true,
-    webpackBuildWorker: true,
-    parallelServerBuildTraces: true,
-    parallelServerCompiles: true,
   },
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "@v0/utils/supabaseClient": "./utils/supabaseClient.ts",
-      "@v0/utils/getUserProfile": "./utils/getUserProfile.ts",
     }
     return config
   },

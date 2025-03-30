@@ -1,72 +1,124 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Bar } from "react-chartjs-2"
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
-import LoadingSpinner from "@/components/ui/loading-spinner"
+import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getBrowserClient } from '@/lib/supabase-client'; // Asume que esta función devuelve un cliente Supabase para el navegador
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import LoadingSpinner from "@/components/ui/loading-spinner"
 
-// Registrar los componentes de Chart.js
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-// Tipar la estructura esperada de la API
-interface ChartApiResponse {
-  labels: string[]
-  datasets: Array<{
-    label: string
-    data: number[]
-    backgroundColor?: string | string[]
-    borderColor?: string | string[]
-  }>
+interface ChartData {
+  productName: string;
+  totalQuantity: number;
 }
 
-export function MostPurchasedChart() {
-  const [chartData, setChartData] = useState<ChartApiResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const MostPurchasedChart: React.FC = () => {
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const response = await fetch("/api/chart-data")
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
-        }
-        const data: ChartApiResponse = await response.json()
-        setChartData(data)
-      } catch (err) {
-        console.error("Error fetching chart data:", err)
-        setError(err instanceof Error ? err.message : "Failed to load chart data")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
+    const fetchMostPurchased = async () => {
+      setLoading(true);
+      setError(null);
+      const supabase = getBrowserClient();
 
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top" as const,
-      },
-      title: {
-        display: true,
-        text: "Top 10 Productos Más Comprados (Cantidad Total)",
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: "Cantidad Comprada",
-        },
-      },
-    },
+      try {
+        // --- AJUSTA ESTA CONSULTA A TU ESQUEMA ---
+        // Asume tabla 'order_items' con 'product_id', 'quantity'
+        // Asume tabla 'products' con 'id', 'name'
+        const { data, error: queryError } = await supabase
+          .from('order_items') // <- Ajusta el nombre de la tabla si es necesario
+          .select(`
+            quantity,
+            products ( name ) 
+          `) // <- Ajusta nombres de columna/tabla si es necesario
+          .limit(500); // Limita por rendimiento, agrega paginación si es necesario
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        if (!data) {
+          setChartData([]);
+          return;
+        }
+
+        // Procesar datos para agregar cantidades por producto
+        const productQuantities: { [key: string]: number } = {};
+        data.forEach((item: any) => {
+            // Asegúrate que el producto y nombre existen
+            const productName = item.products?.name;
+            const quantity = item.quantity;
+
+            if (productName && typeof quantity === 'number') {
+                productQuantities[productName] = (productQuantities[productName] || 0) + quantity;
+            }
+        });
+
+        // Convertir a formato de gráfico y ordenar
+        const formattedData = Object.entries(productQuantities)
+          .map(([productName, totalQuantity]) => ({ productName, totalQuantity }))
+          .sort((a, b) => b.totalQuantity - a.totalQuantity)
+          .slice(0, 10); // Tomar los 10 productos más vendidos
+
+        setChartData(formattedData);
+        // --- FIN DE AJUSTE DE CONSULTA ---
+
+      } catch (err: any) {
+        console.error('Error fetching most purchased products:', err);
+        setError('No se pudieron cargar los datos del gráfico.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMostPurchased();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Productos Populares</CardTitle>
+          <CardDescription>Top 10 productos por cantidad total comprada.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center items-center h-64">
+            <LoadingSpinner />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Productos Populares</CardTitle>
+          <CardDescription>Top 10 productos por cantidad total comprada.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-600">Error: {error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Productos Populares</CardTitle>
+          <CardDescription>Top 10 productos por cantidad total comprada.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground">
+            No hay suficientes datos de pedidos para mostrar el gráfico.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -76,20 +128,28 @@ export function MostPurchasedChart() {
         <CardDescription>Top 10 productos por cantidad total comprada.</CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading && (
-          <div className="flex justify-center items-center h-64">
-            <LoadingSpinner />
-          </div>
-        )}
-        {error && <p className="text-red-600">Error: {error}</p>}
-        {!isLoading && !error && chartData && chartData.labels.length > 0 && <Bar options={options} data={chartData} />}
-        {!isLoading && !error && (!chartData || chartData.labels.length === 0) && (
-          <p className="text-center text-muted-foreground">
-            No hay suficientes datos de pedidos para mostrar el gráfico.
-          </p>
-        )}
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart
+            data={chartData}
+            margin={{
+              top: 5,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="productName" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="totalQuantity" fill="#8884d8" name="Cantidad Vendida" />
+          </BarChart>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
-  )
-}
+  );
+};
+
+export default MostPurchasedChart;
 
