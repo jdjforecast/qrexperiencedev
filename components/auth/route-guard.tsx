@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/components/auth/AuthProvider"
@@ -20,13 +22,9 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
     if (isLoading) return
 
     // Logic for routes that require authentication
-    const isPublicRoute = publicRoutes.some(route => 
-      pathname === route || pathname.startsWith(`${route}/`)
-    )
+    const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 
-    const isAdminRoute = adminRoutes.some(route => 
-      pathname === route || pathname.startsWith(`${route}/`)
-    )
+    const isAdminRoute = adminRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 
     // If not logged in and trying to access a protected route
     if (!isAuthenticated && !isPublicRoute) {

@@ -16,7 +16,7 @@ export default function FixRLSPage() {
 
     try {
       // Ejecutar la migración SQL directamente
-      const { error } = await supabaseClient.rpc('fix_rls')
+      const { error } = await supabaseClient.rpc("fix_rls")
 
       if (error) {
         setResult({

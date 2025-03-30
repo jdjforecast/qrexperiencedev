@@ -2,37 +2,22 @@
 
 import { useState, useEffect } from "react"
 import { Bar } from "react-chartjs-2"
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js"
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
 import LoadingSpinner from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 // Registrar los componentes de Chart.js
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-)
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 // Tipar la estructura esperada de la API
 interface ChartApiResponse {
-  labels: string[];
+  labels: string[]
   datasets: Array<{
-    label: string;
-    data: number[];
-    backgroundColor?: string | string[];
-    borderColor?: string | string[];
-  }>;
+    label: string
+    data: number[]
+    backgroundColor?: string | string[]
+    borderColor?: string | string[]
+  }>
 }
 
 export function MostPurchasedChart() {
@@ -73,22 +58,22 @@ export function MostPurchasedChart() {
         text: "Top 10 Productos Más Comprados (Cantidad Total)",
       },
     },
-     scales: {
-        y: {
-            beginAtZero: true,
-            title: {
-                display: true,
-                text: 'Cantidad Comprada'
-            }
-        }
-    }
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: "Cantidad Comprada",
+        },
+      },
+    },
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Productos Populares</CardTitle>
-         <CardDescription>Top 10 productos por cantidad total comprada.</CardDescription>
+        <CardDescription>Top 10 productos por cantidad total comprada.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading && (
@@ -97,13 +82,14 @@ export function MostPurchasedChart() {
           </div>
         )}
         {error && <p className="text-red-600">Error: {error}</p>}
-        {!isLoading && !error && chartData && chartData.labels.length > 0 && (
-          <Bar options={options} data={chartData} />
+        {!isLoading && !error && chartData && chartData.labels.length > 0 && <Bar options={options} data={chartData} />}
+        {!isLoading && !error && (!chartData || chartData.labels.length === 0) && (
+          <p className="text-center text-muted-foreground">
+            No hay suficientes datos de pedidos para mostrar el gráfico.
+          </p>
         )}
-         {!isLoading && !error && (!chartData || chartData.labels.length === 0) && (
-            <p className="text-center text-muted-foreground">No hay suficientes datos de pedidos para mostrar el gráfico.</p>
-         )}
       </CardContent>
     </Card>
   )
-} 
+}
+

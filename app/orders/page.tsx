@@ -6,7 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider"
 import { getUserOrders } from "@/lib/orders"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-import { Order } from "@/types/order"
+import type { Order } from "@/types/order"
 
 export default function OrdersPage() {
   const { user } = useAuth()
@@ -151,7 +151,9 @@ export default function OrdersPage() {
                         {getStatusText(order.status)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">${order.total_amount.toFixed(2)}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                      ${order.total_amount.toFixed(2)}
+                    </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm">
                       <Link href={`/orders/${order.order_id}`} className="text-blue-600 hover:text-blue-900">
                         Ver Detalles

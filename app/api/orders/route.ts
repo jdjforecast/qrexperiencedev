@@ -6,7 +6,10 @@ export async function GET(request: Request) {
   try {
     // 1. Autenticación y Autorización
     const supabase = await createServerClient()
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
     if (sessionError) {
       console.error("API GET /api/orders: Error getting Supabase session:", sessionError)
@@ -41,26 +44,26 @@ export async function GET(request: Request) {
           )
         )
       `)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("API GET /api/orders: Error fetching orders:", error);
-      return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
+      console.error("API GET /api/orders: Error fetching orders:", error)
+      return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 })
     }
 
     // 3. Validar datos con Zod
-    const validationResult = AdminOrdersArraySchema.safeParse(data);
+    const validationResult = AdminOrdersArraySchema.safeParse(data)
     if (!validationResult.success) {
-      console.error("API GET /api/orders: Zod validation failed:", validationResult.error.errors);
+      console.error("API GET /api/orders: Zod validation failed:", validationResult.error.errors)
       // Es un error del servidor si los datos de la DB no coinciden con el schema
-      return NextResponse.json({ error: "Invalid order data received from database." }, { status: 500 });
+      return NextResponse.json({ error: "Invalid order data received from database." }, { status: 500 })
     }
 
     // 4. Devolver datos validados
-    return NextResponse.json(validationResult.data);
-
+    return NextResponse.json(validationResult.data)
   } catch (error) {
-    console.error("API GET /api/orders: Unexpected error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("API GET /api/orders: Unexpected error:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
-} 
+}
+

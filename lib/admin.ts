@@ -1,6 +1,6 @@
 import { createServerClient } from "./supabase"
 import { createClientClient } from "@/lib/supabase/client"
-import { AdminOrder } from "@/types/order"
+import type { AdminOrder } from "@/types/order"
 import { AdminOrdersArraySchema } from "@/types/schemas"
 
 // Get all users
@@ -12,13 +12,11 @@ export async function getAllUsers() {
 }
 
 // Define return type for this function
-type AdminOrdersFetchResult = 
-  | { success: true; data: AdminOrder[] }
-  | { success: false; error: string };
+type AdminOrdersFetchResult = { success: true; data: AdminOrder[] } | { success: false; error: string }
 
 // Refactored getAllOrders for client-side usage with detailed select and validation
 export async function getAllOrders(): Promise<AdminOrdersFetchResult> {
-  const supabase = createClientClient(); // Use client-side instance
+  const supabase = createClientClient() // Use client-side instance
   try {
     const { data, error } = await supabase
       .from("orders")
@@ -41,28 +39,27 @@ export async function getAllOrders(): Promise<AdminOrdersFetchResult> {
           )
         )
       `)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching all orders:", error);
-      return { success: false, error: error.message }; 
+      console.error("Error fetching all orders:", error)
+      return { success: false, error: error.message }
     }
 
-    // Validate data with Zod 
-    const validationResult = AdminOrdersArraySchema.safeParse(data);
+    // Validate data with Zod
+    const validationResult = AdminOrdersArraySchema.safeParse(data)
     if (!validationResult.success) {
-      console.error("Zod validation failed for getAllOrders:", validationResult.error.errors);
+      console.error("Zod validation failed for getAllOrders:", validationResult.error.errors)
       // Provide a user-friendly error message
-      return { success: false, error: "Error: Datos de pedidos inválidos recibidos del servidor." }; 
+      return { success: false, error: "Error: Datos de pedidos inválidos recibidos del servidor." }
     }
 
     // Return validated data
-    return { success: true, data: validationResult.data };
-
+    return { success: true, data: validationResult.data }
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Error inesperado al obtener todos los pedidos";
-    console.error("Unexpected error fetching all orders:", err);
-    return { success: false, error: errorMessage };
+    const errorMessage = err instanceof Error ? err.message : "Error inesperado al obtener todos los pedidos"
+    console.error("Unexpected error fetching all orders:", err)
+    return { success: false, error: errorMessage }
   }
 }
 

@@ -5,7 +5,6 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { QrCode, ShoppingCart, User, Home } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { NestleLogo } from "@/components/ui/nestle-logo"
 import { useScanner } from "@/contexts/scanner-context"
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
@@ -67,17 +66,13 @@ function NavButton({ icon, label, isActive, onClick }: NavButtonProps) {
     <Button
       variant="ghost"
       className={`relative flex flex-col items-center justify-center h-14 ${
-        isActive 
-        ? "text-white nav-active" 
-        : "text-white/70 hover:text-white"
+        isActive ? "text-white nav-active" : "text-white/70 hover:text-white"
       }`}
       onClick={onClick}
       aria-label={label}
       aria-pressed={isActive}
     >
-      <div className={`${isActive ? "scale-110" : ""} transition-transform duration-200`}>
-        {icon}
-      </div>
+      <div className={`${isActive ? "scale-110" : ""} transition-transform duration-200`}>{icon}</div>
       <span className="text-xs mt-1">{label}</span>
     </Button>
   )
@@ -108,9 +103,9 @@ export function AppFooter({ activeTab, onTabChange }: AppFooterProps) {
 
     // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
     if (
-      (currentScrollY < lastScrollY && currentScrollY > threshold) || 
+      (currentScrollY < lastScrollY && currentScrollY > threshold) ||
       // Siempre mostrar cuando llegamos cerca del final de la página
-      (window.innerHeight + currentScrollY) >= document.body.offsetHeight - 100
+      window.innerHeight + currentScrollY >= document.body.offsetHeight - 100
     ) {
       setIsVisible(true)
     } else if (currentScrollY > lastScrollY && currentScrollY > threshold) {

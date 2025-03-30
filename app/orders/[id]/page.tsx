@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider"
 import { getOrderById } from "@/lib/orders"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-import { Order } from "@/types/order"
+import type { Order } from "@/types/order"
 
 export default function OrderDetailPage() {
   const { id } = useParams()
@@ -20,11 +20,11 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     async function loadOrder() {
-      const orderId = typeof id === 'string' ? id : null;
+      const orderId = typeof id === "string" ? id : null
       if (!user || !orderId) {
-        setIsLoading(false);
-        setError(orderId === null ? "ID de pedido inválido." : null);
-        return;
+        setIsLoading(false)
+        setError(orderId === null ? "ID de pedido inválido." : null)
+        return
       }
 
       try {
@@ -32,13 +32,13 @@ export default function OrderDetailPage() {
         const result = await getOrderById(orderId)
 
         if (result.success && result.data) {
-          setOrder(result.data);
+          setOrder(result.data)
         } else if (result.success) {
-          setError("No se encontraron datos para el pedido.");
-          setOrder(null);
+          setError("No se encontraron datos para el pedido.")
+          setOrder(null)
         } else {
           setError(result.error || "Error al cargar el pedido")
-          setOrder(null);
+          setOrder(null)
         }
       } catch (err) {
         console.error("Error al cargar el pedido:", err)
@@ -131,7 +131,7 @@ export default function OrderDetailPage() {
                           {item.products?.image_url ? (
                             <Image
                               src={item.products.image_url}
-                              alt={item.products?.name ?? 'Producto sin nombre'}
+                              alt={item.products?.name ?? "Producto sin nombre"}
                               fill
                               className="rounded-md object-cover"
                             />
@@ -143,7 +143,9 @@ export default function OrderDetailPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-900">{item.products?.name ?? 'Producto desconocido'}</p>
+                          <p className="truncate text-sm font-medium text-gray-900">
+                            {item.products?.name ?? "Producto desconocido"}
+                          </p>
                         </div>
 
                         <div className="text-right">

@@ -1,9 +1,8 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { getBrowserClient } from '@/lib/supabase-client'
-import LoadingSpinner from "@/components/ui/loading-spinner"
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { getBrowserClient } from "@/lib/supabase-client"
 
 // Interface matching the data we fetch - fetch id, name, and urlpage
 interface ProductInfo {
@@ -24,18 +23,17 @@ export default function DevProductListPage() {
       setError(null)
       try {
         const { data, error: dbError } = await supabase
-          .from('products')
+          .from("products")
           // Select id, name, and urlpage
-          .select('id, name, urlpage')
-          .order('name', { ascending: true })
+          .select("id, name, urlpage")
+          .order("name", { ascending: true })
 
         if (dbError) {
-          throw dbError;
+          throw dbError
         }
 
         // Type assertion since we know the shape matches ProductInfo
-        setProducts((data || []) as ProductInfo[]);
-
+        setProducts((data || []) as ProductInfo[])
       } catch (err: any) {
         console.error("Error loading product list for dev page:", err)
         setError(err.message || "An unexpected error occurred fetching product list")
@@ -51,8 +49,8 @@ export default function DevProductListPage() {
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 text-white">
       <h1 className="mb-6 text-2xl sm:text-3xl font-bold text-center">Lista de Productos (Desarrollo)</h1>
       <p className="mb-6 text-center text-yellow-300 bg-yellow-900/50 p-2 rounded-md">
-        <strong>Nota:</strong> Estos enlaces usan el valor de la columna 'urlpage'.
-        Si un producto no tiene 'urlpage', no se generará enlace funcional para él.
+        <strong>Nota:</strong> Estos enlaces usan el valor de la columna 'urlpage'. Si un producto no tiene 'urlpage',
+        no se generará enlace funcional para él.
       </p>
 
       {isLoading ? (
@@ -72,10 +70,13 @@ export default function DevProductListPage() {
           <ul className="space-y-2">
             {products.map((product) => {
               // Use urlpage for the link. Only create link if urlpage exists.
-              const linkHref = product.urlpage ? `/products/${product.urlpage}` : null;
-              
+              const linkHref = product.urlpage ? `/products/${product.urlpage}` : null
+
               return (
-                <li key={product.id} className="border-b border-white/10 pb-2 last:border-b-0 flex justify-between items-center">
+                <li
+                  key={product.id}
+                  className="border-b border-white/10 pb-2 last:border-b-0 flex justify-between items-center"
+                >
                   <span>
                     {linkHref ? (
                       <Link
@@ -94,11 +95,12 @@ export default function DevProductListPage() {
                     urlpage: {product.urlpage || <span className="text-red-400 italic">NULO</span>}
                   </span>
                 </li>
-              );
+              )
             })}
           </ul>
         </div>
       )}
     </div>
   )
-} 
+}
+

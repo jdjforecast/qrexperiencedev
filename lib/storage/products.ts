@@ -1,8 +1,8 @@
 import { createClientClient } from "@/lib/supabase/client"
 import { createServerClient } from "../supabase"
 import type { Product } from "@/types/product"
-import { ProductSchema, NewProductSchema } from "@/types/schemas"
-import { z } from "zod"
+import { NewProductSchema } from "@/types/schemas"
+import type { z } from "zod"
 
 // Crear un nuevo producto
 export async function createProduct(productData: z.input<typeof NewProductSchema>) {

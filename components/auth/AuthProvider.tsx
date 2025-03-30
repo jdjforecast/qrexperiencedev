@@ -1,239 +1,121 @@
-"use client";
+"use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
-import { getBrowserClient } from "@/lib/supabase";
-import { ROUTES } from "@/lib/routes";
+import type React from "react"
 
-// Define public routes based on the ROUTES object
-const PUBLIC_ROUTE_VALUES: string[] = [
-  ROUTES.HOME,
-  ROUTES.LOGIN,
-  ROUTES.REGISTER,
-  ROUTES.PRODUCTS,
-  // Need a way to match dynamic product routes, regex might be better
-  // For now, let's assume /products/* is public
-];
-
-// Define admin routes based on the ROUTES object
-const ADMIN_ROUTE_PREFIX = ROUTES.ADMIN.DASHBOARD; // "/admin"
-
-function isPublicRoute(path: string): boolean {
-  if (path.startsWith(ROUTES.PRODUCTS + '/')) return true; // Treat all /products/... as public
-  return PUBLIC_ROUTE_VALUES.includes(path);
-}
-
-function isAdminRoute(path: string): boolean {
-  return path.startsWith(ADMIN_ROUTE_PREFIX);
-}
-
-interface ProfileData {
-  id: string;
-  role: string;
-  full_name?: string;
-  company_name?: string;
-  [key: string]: any;
-}
+import { createContext, useContext, useEffect, useState } from "react"
+import type { User, Session } from "@supabase/supabase-js"
+import { getBrowserClient } from "@/lib/supabase-client"
 
 interface AuthContextType {
-  user: User | null;
-  profile: ProfileData | null;
-  isAdmin: boolean;
-  isLoading: boolean;
-  error: string | null;
-  isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  signOut: () => Promise<{ success: boolean; message: string }>;
-  refreshUser: () => Promise<void>;
-  refreshSession: () => Promise<void>;
+  user: User | null
+  session: Session | null
+  isLoading: boolean
+  isAdmin: boolean
+  signOut: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  isLoading: true,
+  isAdmin: false,
+  signOut: async () => {},
+})
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(() => getBrowserClient(), []);
-  const router = useRouter();
-  const pathname = usePathname();
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch user session and profile
-  const fetchUserAndProfile = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Get Supabase session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("AuthProvider: Session error", sessionError);
-        setError(sessionError.message);
-        setUser(null);
-        setProfile(null);
-        setIsLoading(false);
-        return;
-      }
-      
-      // If no session, clear state
-      if (!session) {
-        setUser(null);
-        setProfile(null);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Set user from session
-      setUser(session.user);
-      
-      // Fetch profile data from Supabase
-      if (session.user.id) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (profileError) {
-          console.error("AuthProvider: Profile fetch error", profileError);
-          // Continue with just the user data
-        } else if (profileData) {
-          setProfile(profileData);
-          setIsAdmin(profileData.role === "admin");
-        }
-      }
-    } catch (err) {
-      console.error("AuthProvider: Error fetching user and profile", err);
-      setError("Error al cargar la sesión del usuario");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Load user on initial mount
   useEffect(() => {
-    fetchUserAndProfile();
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("AuthProvider: Auth state change", event);
-        if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
-          await fetchUserAndProfile();
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
-          setIsAdmin(false);
-        }
+    const supabase = getBrowserClient()
+
+    // Obtener la sesión inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setUser(session?.user || null)
+
+      if (session?.user) {
+        checkAdminStatus(session.user.id)
       }
-    );
-    
-    // Cleanup subscription
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
-  // Sign in with email and password
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        console.error("AuthProvider: Sign in error", error);
-        return { success: false, message: error.message };
-      }
-      
-      await fetchUserAndProfile();
-      
-      return { success: true, message: "Inicio de sesión exitoso" };
-    } catch (err) {
-      console.error("AuthProvider: Sign in error", err);
-      return { success: false, message: "Error al iniciar sesión" };
-    }
-  };
+      setIsLoading(false)
+    })
 
-  // Sign out
-  const signOut = async (): Promise<{ success: boolean; message: string }> => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("AuthProvider: Sign out error", error);
-        return { success: false, message: error.message };
-      }
-      
-      // Clear local state
-      setUser(null);
-      setProfile(null);
-      setIsAdmin(false);
-      
-      return { success: true, message: "Sesión cerrada exitosamente" };
-    } catch (err) {
-      console.error("AuthProvider: Sign out error", err);
-      return { success: false, message: "Error al cerrar sesión" };
-    }
-  };
+    // Suscribirse a cambios de autenticación
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session)
+      setUser(session?.user || null)
 
-  // Function to manually refresh profile
-  const refreshUser = async () => {
-    if (user) {
-      await fetchUserAndProfile();
-    } else {
-      console.log("AuthProvider: Cannot refresh profile, no user available");
-    }
-  };
-
-  // Function to refresh session
-  const refreshSession = async () => {
-    try {
-      const { data, error } = await supabase.auth.refreshSession();
-      if (error) {
-        console.error("AuthProvider: Session refresh error", error);
-        setError("Error al actualizar la sesión");
+      if (session?.user) {
+        checkAdminStatus(session.user.id)
       } else {
-        await fetchUserAndProfile();
+        setIsAdmin(false)
       }
-    } catch (err) {
-      console.error("AuthProvider: Error refreshing session", err);
-      setError("Error al actualizar la sesión");
-    }
-  };
 
-  // Memoize the final context value
-  const value = useMemo(() => ({
-    user,
-    profile,
-    isLoading,
-    isAdmin,
-    error,
-    isAuthenticated: !!user,
-    signIn,
-    signOut,
-    refreshUser,
-    refreshSession
-  }), [user, profile, isLoading, isAdmin, error]);
-  
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+      setIsLoading(false)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  // Verificar si el usuario es administrador
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const supabase = getBrowserClient()
+
+      // Verificar en la tabla users
+      const { data, error } = await supabase.from("users").select("is_admin").eq("id", userId).single()
+
+      if (!error && data) {
+        const adminStatus =
+          data.is_admin === true || data.is_admin === "true" || data.is_admin === 1 || data.is_admin === "1"
+
+        setIsAdmin(adminStatus)
+        return
+      }
+
+      // Si no hay datos en users, verificar en profiles
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", userId)
+        .single()
+
+      if (!profileError && profileData) {
+        const adminStatus =
+          profileData.is_admin === true ||
+          profileData.is_admin === "true" ||
+          profileData.is_admin === 1 ||
+          profileData.is_admin === "1"
+
+        setIsAdmin(adminStatus)
+        return
+      }
+
+      setIsAdmin(false)
+    } catch (error) {
+      console.error("Error checking admin status:", error)
+      setIsAdmin(false)
+    }
+  }
+
+  // Función para cerrar sesión
+  const signOut = async () => {
+    const supabase = getBrowserClient()
+    await supabase.auth.signOut()
+  }
+
+  return <AuthContext.Provider value={{ user, session, isLoading, isAdmin, signOut }}>{children}</AuthContext.Provider>
 }
 
+// Hook para usar el contexto de autenticación
 export function useAuth() {
-  const context = useContext(AuthContext);
-  
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  
-  return context;
-} 
+  return useContext(AuthContext)
+}
+

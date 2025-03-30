@@ -18,14 +18,14 @@
   --nestle-blue-light: #0066cc;
   --nestle-green: #a4ce4e;
   --nestle-white: #ffffff;
-  
+
   /* Paleta principal (predomina el azul) */
-  --primary: #0033A0;
+  --primary: #0033a0;
   --primary-dark: #002580;
-  --primary-light: #0055B8;
+  --primary-light: #0055b8;
   --secondary: #539dd6;
   --accent: #a6c845;
-  
+
   /* Colores neutros */
   --white: #ffffff;
   --off-white: #f5f7fa;
@@ -33,17 +33,17 @@
   --mid-gray: #9aa5b5;
   --dark-gray: #4a5568;
   --black: #1a202c;
-  
+
   /* Colores de feedback */
   --success: #48bb78;
   --warning: #ed8936;
   --error: #e53e3e;
   --info: #4299e1;
-  
+
   /* Variables para gradientes */
   --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   --gradient-secondary: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%);
-  
+
   /* Espaciado (para consistencia) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -54,24 +54,24 @@
   --space-12: 3rem;
   --space-16: 4rem;
   --space-20: 5rem;
-  
+
   /* Radios de borde */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-full: 9999px;
-  
+
   /* Sombras */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  
+
   /* Transiciones */
   --transition-fast: 150ms ease;
   --transition-normal: 300ms ease;
   --transition-slow: 500ms ease;
-  
+
   /* Z-indices (para mantener consistencia) */
   --z-base: 1;
   --z-dropdown: 10;
@@ -113,61 +113,62 @@ body::after {
   width: 100%;
   height: 100%;
   background: var(--gradient-primary);
-  opacity: 0.90;
+  opacity: 0.9;
   z-index: -1; /* Behind content */
 }
 
-/* Clases de utilidad */
+/* Replace the @layer components section with this updated version that uses rgba values instead of opacity modifiers */
+
 @layer components {
   /* Contenedores */
   .container-narrow {
     @apply container max-w-md mx-auto px-4 md:px-6;
   }
-  
+
   .container-wide {
     @apply container max-w-6xl mx-auto px-4 md:px-6;
   }
-  
+
   /* Tarjetas */
   .card {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-4 shadow-md;
+    @apply bg-white bg-opacity-10 backdrop-blur-md border border-white border-opacity-20 rounded-lg p-4 shadow-md;
   }
-  
+
   .card-solid {
-    @apply bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-4 shadow-md;
+    @apply bg-white bg-opacity-20 backdrop-blur-md border border-white border-opacity-30 rounded-lg p-4 shadow-md;
   }
-  
+
   /* Botones */
   .btn-primary {
     @apply bg-primary hover:bg-primary-dark text-white font-medium rounded-lg py-2 px-4 transition-colors;
   }
-  
+
   .btn-secondary {
-    @apply bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg py-2 px-4 transition-colors;
+    @apply bg-white bg-opacity-20 hover:bg-white hover:bg-opacity-30 text-white font-medium rounded-lg py-2 px-4 transition-colors;
   }
-  
+
   .btn-outline {
-    @apply bg-transparent border border-white/50 hover:bg-white/10 text-white font-medium rounded-lg py-2 px-4 transition-colors;
+    @apply bg-transparent border border-white border-opacity-50 hover:bg-white hover:bg-opacity-10 text-white font-medium rounded-lg py-2 px-4 transition-colors;
   }
-  
+
   /* Efectos */
   .hover-lift {
     @apply transition-transform duration-300 hover:-translate-y-1;
   }
-  
+
   .fade-in {
     @apply animate-in fade-in duration-300;
   }
-  
+
   .slide-up {
     @apply animate-in slide-in-from-bottom duration-300;
   }
-  
+
   /* Diseño responsivo */
   .mobile-full {
     @apply -mx-4 md:mx-0 md:rounded-lg;
   }
-  
+
   .nav-active {
     @apply relative before:absolute before:bottom-0 before:left-1/2 before:-translate-x-1/2 before:w-5 before:h-1 before:bg-white before:rounded;
   }

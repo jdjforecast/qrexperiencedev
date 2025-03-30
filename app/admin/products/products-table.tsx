@@ -11,7 +11,6 @@ import { Loader2, Search, Edit, Trash2, Eye } from "lucide-react"
 import { executeWithRetry } from "@/lib/supabase-client"
 import { createBrowserClient } from "@/lib/supabase-client"
 import { useToast } from "@/components/ui/use-toast"
-import { supabaseClient } from "@/lib/supabase/client-utils"
 
 interface Product {
   id: string

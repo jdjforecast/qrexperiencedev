@@ -9,7 +9,6 @@ import { QRScanner } from "@/components/ui/qr-scanner"
 import ProductDisplay from "@/components/ProductDisplay"
 import { toast } from "react-hot-toast"
 import { getProductById } from "@/lib/api/products"
-import { BackButton } from "@/components/BackButton"
 import { QrCode, Smartphone, TestTube, Database, Loader2 } from "lucide-react"
 import { PageTemplate, PageContent } from "@/components/ui/page-template"
 
@@ -32,10 +31,10 @@ export default function QRTestPage() {
   const handleScan = async (decodedText: string) => {
     setIsScanning(true)
     setScanError(null)
-    
+
     try {
       console.log("QR escaneado:", decodedText)
-      
+
       // Simulando un producto escaneado para pruebas
       // En un caso real, aquí llamarías a una API con el código QR
       const mockProduct: Product = {
@@ -43,9 +42,9 @@ export default function QRTestPage() {
         name: "Producto de Prueba",
         description: "Este es un producto de prueba escaneado con el código: " + decodedText,
         price: 99.99,
-        image_url: "https://via.placeholder.com/150"
+        image_url: "https://via.placeholder.com/150",
       }
-      
+
       setScannedProduct(mockProduct)
       toast.success("QR escaneado con éxito")
     } catch (error) {
@@ -160,12 +159,12 @@ export default function QRTestPage() {
                     <p className="text-gray-600">Procesando QR...</p>
                   </div>
                 ) : (
-                  <QRScanner 
-                    onScan={handleScan} 
+                  <QRScanner
+                    onScan={handleScan}
                     onError={handleScanError}
                     config={{
-                      fps: 10, 
-                      qrbox: { width: 250, height: 250 }
+                      fps: 10,
+                      qrbox: { width: 250, height: 250 },
                     }}
                   />
                 )}

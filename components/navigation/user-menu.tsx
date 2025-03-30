@@ -46,7 +46,7 @@ export function UserMenu() {
       >
         <span>{profile?.full_name || user.email}</span>
         <svg
-          className={`h-5 w-5 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`h-5 w-5 transform transition-transform ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

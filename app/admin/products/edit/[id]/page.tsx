@@ -157,27 +157,28 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData), // Send current form data
-      });
+      })
 
       // 2. Handle response
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
 
       // Product data updated successfully via API.
       // Now, upload the new image if one was selected.
-      let uploadSuccessful = true; // Assume success if no image file
-      if (imageFile) { // 3. Image upload logic remains
-        const { error: uploadError } = await uploadProductImage(imageFile, productId);
+      let uploadSuccessful = true // Assume success if no image file
+      if (imageFile) {
+        // 3. Image upload logic remains
+        const { error: uploadError } = await uploadProductImage(imageFile, productId)
         if (uploadError) {
-          uploadSuccessful = false;
-          console.error("Error uploading new image:", uploadError);
+          uploadSuccessful = false
+          console.error("Error uploading new image:", uploadError)
           toast({
             title: "Advertencia",
             description: "Datos del producto actualizados, pero falló la subida de la nueva imagen.",
             variant: "default", // Or use a specific warning variant
-          });
+          })
           // Decide whether to proceed with redirect even if image fails
           // Proceeding for now.
         }
@@ -190,24 +191,24 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           title: "Producto actualizado",
           description: "El producto se ha actualizado correctamente.",
           variant: "default",
-        });
+        })
       }
 
-      router.push("/admin/products"); // Redirect after operations
-
-    } catch (error) { // Handle errors (from PUT or image upload)
-      console.error("Error updating product process:", error);
-      const message = error instanceof Error ? error.message : "Error al actualizar el producto";
-      setError(message);
+      router.push("/admin/products") // Redirect after operations
+    } catch (error) {
+      // Handle errors (from PUT or image upload)
+      console.error("Error updating product process:", error)
+      const message = error instanceof Error ? error.message : "Error al actualizar el producto"
+      setError(message)
       toast({
         title: "Error",
         description: message,
         variant: "destructive",
-      });
+      })
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   return (
     <div className="p-6">

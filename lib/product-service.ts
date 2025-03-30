@@ -6,7 +6,7 @@ import { createBrowserClient } from "./supabase-client"
 import { createServerClient } from "./auth"
 import type { Product } from "./db-schema"
 import { createClientClient } from "@/lib/supabase/client"
-import { ProductData } from "@/types/cart"
+import type { ProductData } from "@/types/cart"
 import { ProductDataSchema } from "@/types/schemas"
 
 /**
@@ -39,18 +39,18 @@ export async function getProduct(id: string): Promise<{ product: Product | null;
   try {
     const supabase = await createServerClient()
     const { data: product, error } = await supabase
-        .from("products")
-        .select("*")
-        .or(`urlpage.eq.${id},id.eq.${id}`)
-        .single()
+      .from("products")
+      .select("*")
+      .or(`urlpage.eq.${id},id.eq.${id}`)
+      .single()
 
     if (error) {
-        console.error("Error getting product by ID:", error.message)
-        if (error.code === 'PGRST116') {
-             console.log(`Product not found for id/url: ${id}`)
-             return { product: null, error: null }
-        }
-        return { product: null, error: new Error(error.message) }
+      console.error("Error getting product by ID:", error.message)
+      if (error.code === "PGRST116") {
+        console.log(`Product not found for id/url: ${id}`)
+        return { product: null, error: null }
+      }
+      return { product: null, error: new Error(error.message) }
     }
 
     return { product, error: null }
@@ -102,7 +102,7 @@ export async function updateProductUrl(
     if (urlpage.length > 50) {
       urlpage = urlpage.substring(0, 50)
     }
-    const shortId = productId.split('-')[0]
+    const shortId = productId.split("-")[0]
     urlpage = `${urlpage}-${shortId}`
 
     const { error } = await supabase.from("products").update({ urlpage }).eq("id", productId)
@@ -129,10 +129,7 @@ export async function generateMissingProductUrls(): Promise<{ success: boolean; 
   try {
     const supabase = createBrowserClient()
 
-    const { data: products, error: fetchError } = await supabase
-        .from("products")
-        .select("id, name")
-        .is("urlpage", null)
+    const { data: products, error: fetchError } = await supabase.from("products").select("id, name").is("urlpage", null)
 
     if (fetchError) {
       console.error("Error fetching products without URL:", fetchError.message)
@@ -151,19 +148,19 @@ export async function generateMissingProductUrls(): Promise<{ success: boolean; 
     let firstError: Error | null = null
 
     for (const product of products) {
-        const result = await updateProductUrl(product.id, product.name)
-        if (result.success) {
-            successCount++
-        } else {
-            errorOccurred = true
-            if (!firstError && result.error) {
-                firstError = result.error
-            }
-            console.error(`Failed to update URL for product ${product.id}: ${result.error?.message}`)
+      const result = await updateProductUrl(product.id, product.name)
+      if (result.success) {
+        successCount++
+      } else {
+        errorOccurred = true
+        if (!firstError && result.error) {
+          firstError = result.error
         }
+        console.error(`Failed to update URL for product ${product.id}: ${result.error?.message}`)
+      }
     }
 
-     console.log(`Successfully updated URLs for ${successCount} out of ${products.length} products.`)
+    console.log(`Successfully updated URLs for ${successCount} out of ${products.length} products.`)
 
     return {
       success: !errorOccurred,
@@ -195,7 +192,7 @@ export async function getProductClientSide(idOrUrl: string): Promise<ProductFetc
 
     if (error) {
       // Handle product not found specifically
-      if (error.code === 'PGRST116') { 
+      if (error.code === "PGRST116") {
         console.log(`Product not found client-side for id/url: ${idOrUrl}`)
         return { success: false, error: "Producto no encontrado", productNotFound: true }
       }
@@ -213,7 +210,6 @@ export async function getProductClientSide(idOrUrl: string): Promise<ProductFetc
 
     // Return validated data
     return { success: true, data: validationResult.data }
-
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Error inesperado al obtener el producto"
     console.error("Unexpected error in getProductClientSide:", err)
@@ -222,7 +218,7 @@ export async function getProductClientSide(idOrUrl: string): Promise<ProductFetc
 }
 
 // Define result type for client-side fetch
-type ProductFetchResult = 
+type ProductFetchResult =
   | { success: true; data: ProductData }
   | { success: false; error: string; productNotFound?: boolean }
 

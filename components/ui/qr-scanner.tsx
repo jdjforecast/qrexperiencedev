@@ -9,7 +9,7 @@ interface QRScannerProps {
   onError?: (error: string) => void
   config?: {
     fps?: number
-    qrbox?: { width: number, height: number } | number
+    qrbox?: { width: number; height: number } | number
     aspectRatio?: number
     disableFlip?: boolean
   }
@@ -104,8 +104,7 @@ export function QRScanner({ onScan, onError, config = {} }: QRScannerProps) {
     return () => {
       clearTimeout(timeoutId)
       if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop()
-          .catch(e => console.error("Error stopping QR scanner:", e))
+        scannerRef.current.stop().catch((e) => console.error("Error stopping QR scanner:", e))
       }
     }
   }, [onScan, onError, config])
@@ -116,8 +115,12 @@ export function QRScanner({ onScan, onError, config = {} }: QRScannerProps) {
         <div className="text-center card-solid">
           <AlertCircle className="h-10 w-10 mx-auto mb-3 text-error" />
           <p className="text-white font-medium mb-2">Error en la cámara</p>
-          <p className="text-white/80 text-sm">{error || "La cámara no está disponible en este dispositivo o navegador"}</p>
-          <p className="text-sm mt-4 text-white/70">Intenta en otro dispositivo o navegador, o verifica los permisos de cámara.</p>
+          <p className="text-white/80 text-sm">
+            {error || "La cámara no está disponible en este dispositivo o navegador"}
+          </p>
+          <p className="text-sm mt-4 text-white/70">
+            Intenta en otro dispositivo o navegador, o verifica los permisos de cámara.
+          </p>
         </div>
       </div>
     )
@@ -125,11 +128,11 @@ export function QRScanner({ onScan, onError, config = {} }: QRScannerProps) {
 
   return (
     <div className="qr-scanner relative rounded-lg overflow-hidden">
-      <div 
-        ref={containerRef} 
-        className={`w-full h-full min-h-[300px] bg-black/20 ${isScanning ? 'animate-pulse-light' : ''}`} 
+      <div
+        ref={containerRef}
+        className={`w-full h-full min-h-[300px] bg-black/20 ${isScanning ? "animate-pulse-light" : ""}`}
       />
-      
+
       {/* Overlay con marco de escaneo */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
         <div className="relative w-[70%] h-[70%] border-2 border-white/70 rounded-lg">
@@ -138,18 +141,18 @@ export function QRScanner({ onScan, onError, config = {} }: QRScannerProps) {
           <div className="absolute -top-1 -right-1 w-5 h-5 border-t-2 border-r-2 border-white"></div>
           <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-2 border-l-2 border-white"></div>
           <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-2 border-r-2 border-white"></div>
-          
+
           {/* Línea de escaneo animada */}
           <div className="absolute left-0 w-full h-0.5 bg-white/70 animate-[scan_2s_ease-in-out_infinite]"></div>
         </div>
       </div>
-      
+
       {/* Guía para el usuario */}
       <div className="absolute bottom-0 left-0 right-0 p-3 bg-black/40 text-white text-center text-sm">
         <Camera className="h-4 w-4 inline-block mr-1" />
         Coloca el código QR dentro del marco
       </div>
-      
+
       <style jsx>{`
         @keyframes scan {
           0% { top: 10%; }

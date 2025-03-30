@@ -84,9 +84,10 @@ export default function CatalogPage() {
       console.error("Error creating product:", error)
       toast({
         title: "Error",
-        description: typeof error === 'object' && error !== null && 'message' in error 
-          ? String(error.message) 
-          : "No se pudo crear el producto",
+        description:
+          typeof error === "object" && error !== null && "message" in error
+            ? String(error.message)
+            : "No se pudo crear el producto",
         variant: "destructive",
       })
     } finally {
@@ -127,9 +128,10 @@ export default function CatalogPage() {
       console.error("Error updating product:", error)
       toast({
         title: "Error",
-        description: typeof error === 'object' && error !== null && 'message' in error 
-          ? String(error.message) 
-          : "No se pudo actualizar el producto",
+        description:
+          typeof error === "object" && error !== null && "message" in error
+            ? String(error.message)
+            : "No se pudo actualizar el producto",
         variant: "destructive",
       })
     } finally {
@@ -143,11 +145,11 @@ export default function CatalogPage() {
     try {
       setLoading(true)
       const result = await deleteProduct(id)
-      
+
       if (!result.success) {
         throw new Error(result.error || "Error al eliminar el producto")
       }
-      
+
       toast({
         title: "Éxito",
         description: "Producto eliminado correctamente",
@@ -157,9 +159,10 @@ export default function CatalogPage() {
       console.error("Error deleting product:", error)
       toast({
         title: "Error",
-        description: typeof error === 'object' && error !== null && 'message' in error 
-          ? String(error.message) 
-          : "No se pudo eliminar el producto",
+        description:
+          typeof error === "object" && error !== null && "message" in error
+            ? String(error.message)
+            : "No se pudo eliminar el producto",
         variant: "destructive",
       })
     } finally {

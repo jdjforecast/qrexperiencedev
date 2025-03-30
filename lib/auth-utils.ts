@@ -15,14 +15,10 @@ export async function isUserAdmin(user: User | null): Promise<boolean> {
 
   try {
     const supabase = getBrowserClient()
-    const { data, error } = await supabase
-      .from("profiles") 
-      .select("role") 
-      .eq("id", user.id)
-      .single()
+    const { data, error } = await supabase.from("profiles").select("role").eq("id", user.id).single()
 
     if (error) {
-      if (error.code === 'PGRST116') return false; 
+      if (error.code === "PGRST116") return false
       console.error("Error al verificar rol de administrador:", error)
       return false
     }
@@ -41,19 +37,21 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
   try {
     const supabase = getBrowserClient()
     // Obtener el usuario de la sesión actual del cliente
-    const { data: { user }, error: sessionError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: sessionError,
+    } = await supabase.auth.getUser()
+
     if (sessionError || !user) {
-      console.error("Error getting current user or no user session:", sessionError);
-      return false;
+      console.error("Error getting current user or no user session:", sessionError)
+      return false
     }
 
     // Reutilizar la lógica de isUserAdmin
-    return await isUserAdmin(user);
-
+    return await isUserAdmin(user)
   } catch (error) {
-    console.error("Error checking current user admin status:", error);
-    return false;
+    console.error("Error checking current user admin status:", error)
+    return false
   }
 }
 
@@ -64,30 +62,28 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 export async function getCurrentUserProfile(): Promise<any | null> {
   try {
     const supabase = getBrowserClient()
-    const { data: { user }, error: sessionError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: sessionError,
+    } = await supabase.auth.getUser()
+
     if (sessionError || !user) {
-      console.error("Error getting current user or no user session:", sessionError);
-      return null;
+      console.error("Error getting current user or no user session:", sessionError)
+      return null
     }
 
     // Obtener perfil usando el ID del usuario de sesión
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
     if (error) {
-      if (error.code === 'PGRST116') return null; // Profile not found is not an error here
-      console.error("Error fetching current user profile:", error);
-      return null;
+      if (error.code === "PGRST116") return null // Profile not found is not an error here
+      console.error("Error fetching current user profile:", error)
+      return null
     }
-    return data;
-
+    return data
   } catch (error) {
-    console.error("Error getting current user profile:", error);
-    return null;
+    console.error("Error getting current user profile:", error)
+    return null
   }
 }
 
@@ -97,25 +93,20 @@ export async function getCurrentUserProfile(): Promise<any | null> {
  * @returns Promise<any | null> Perfil del usuario o null si hay error.
  */
 export async function getUserProfile(userId: string): Promise<any | null> {
-  if (!userId) return null;
+  if (!userId) return null
   try {
     const supabase = getBrowserClient()
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
     if (error) {
-      if (error.code === 'PGRST116') return null; // Profile not found
-      console.error(`Error fetching profile for user ${userId}:`, error);
-      return null;
+      if (error.code === "PGRST116") return null // Profile not found
+      console.error(`Error fetching profile for user ${userId}:`, error)
+      return null
     }
-    return data;
-
+    return data
   } catch (error) {
-    console.error(`Error getting profile for user ${userId}:`, error);
-    return null;
+    console.error(`Error getting profile for user ${userId}:`, error)
+    return null
   }
 }
 

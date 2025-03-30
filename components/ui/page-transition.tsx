@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ReactNode } from "react"
+import type { ReactNode } from "react"
 
 // Tipos de transiciones disponibles
 type TransitionType = "fade" | "slide-up" | "slide-left" | "zoom" | "none"
@@ -17,12 +17,7 @@ interface PageTransitionProps {
  * Componente que añade transiciones suaves a las páginas
  * para mejorar la experiencia de usuario
  */
-export function PageTransition({
-  children,
-  type = "fade",
-  duration = 0.3,
-  className = "",
-}: PageTransitionProps) {
+export function PageTransition({ children, type = "fade", duration = 0.3, className = "" }: PageTransitionProps) {
   // Configuración de animaciones por tipo
   const animations = {
     fade: {
@@ -60,9 +55,9 @@ export function PageTransition({
       initial={animation.initial}
       animate={animation.animate}
       exit={animation.exit}
-      transition={{ 
-        duration, 
-        ease: "easeInOut" 
+      transition={{
+        duration,
+        ease: "easeInOut",
       }}
       className={className}
     >
@@ -119,14 +114,15 @@ export function AnimateOnView({
       initial={animation.initial}
       whileInView={animation.whileInView}
       viewport={{ once: true, amount: threshold }}
-      transition={{ 
-        duration: 0.5, 
-        delay, 
-        ease: "easeOut" 
+      transition={{
+        duration: 0.5,
+        delay,
+        ease: "easeOut",
       }}
       className={className}
     >
       {children}
     </motion.div>
   )
-} 
+}
+

@@ -26,10 +26,12 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
-  return { 
-    user, 
-    loading, 
-    isAuthenticated: !!user 
+  return {
+    user,
+    loading,
+    isAuthenticated: !!user,
   }
 }
+
+// Re-export from the new structure for backward compatibility from '@/components/auth/AuthProvider'
 

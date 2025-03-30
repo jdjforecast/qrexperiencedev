@@ -14,7 +14,7 @@ import { toast } from "@/components/ui/use-toast"
 /**
  * Interfaz para los productos
  */
-type Product = ProductType;
+type Product = ProductType
 
 /**
  * Props para el componente ProductSelector
@@ -65,7 +65,7 @@ export function ProductSelector({
   // Función para cargar productos con filtrado opcional por categoría
   const fetchProducts = useCallback(async () => {
     const products = await getAllProducts()
-    
+
     // Si hay una categoría especificada, filtramos por esa categoría
     if (category) {
       return products.filter((product: Product) => product.category === category)

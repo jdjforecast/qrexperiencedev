@@ -215,7 +215,7 @@ export interface Database {
             columns: ["user_id"]
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
     }

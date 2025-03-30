@@ -1,14 +1,13 @@
 "use client"
-
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Search, Eye, CheckCircle, ArrowLeft } from "lucide-react"
+import { Search, CheckCircle, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getCurrentUser, isUserAdmin } from "@/lib/auth/server"
 import { updateOrderStatus } from "@/lib/orders"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { AdminOrder } from "@/types/order"
+import type { AdminOrder } from "@/types/order"
+import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
 
 export default function AdminOrdersPage() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -23,7 +22,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     async function checkAdminAndLoadOrders() {
       setIsLoading(true)
-      let isAdminCheck = false;
+      let isAdminCheck = false
       try {
         const user = await getCurrentUser()
         if (!user) {
@@ -37,7 +36,7 @@ export default function AdminOrdersPage() {
           router.push("/")
           return
         }
-        
+
         const response = await fetch("/api/orders")
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
@@ -45,7 +44,6 @@ export default function AdminOrdersPage() {
         }
         const data: AdminOrder[] = await response.json()
         setOrders(data)
-
       } catch (err) {
         console.error("Error in admin orders page setup:", err)
         const message = err instanceof Error ? err.message : "An unexpected error occurred"
@@ -71,11 +69,7 @@ export default function AdminOrdersPage() {
     const userName = order.user?.full_name?.toLowerCase() || ""
     const userEmail = order.user?.email?.toLowerCase() || ""
 
-    return (
-      orderId.includes(searchLower) ||
-      userName.includes(searchLower) ||
-      userEmail.includes(searchLower)
-    )
+    return orderId.includes(searchLower) || userName.includes(searchLower) || userEmail.includes(searchLower)
   })
 
   const markAsCompleted = async (orderId: string) => {
@@ -84,10 +78,8 @@ export default function AdminOrdersPage() {
     setIsLoading(false)
 
     if (result.success && result.data) {
-      setOrders(currentOrders => 
-        currentOrders.map(order => 
-          order.order_id === orderId ? { ...order, ...result.data } : order
-        )
+      setOrders((currentOrders) =>
+        currentOrders.map((order) => (order.order_id === orderId ? { ...order, ...result.data } : order)),
       )
       toast({
         title: "Pedido actualizado",
@@ -161,7 +153,7 @@ export default function AdminOrdersPage() {
                         {order.user?.full_name && ` (${order.user.full_name})`}
                       </td>
                       <td className="py-3 px-4">{new Date(order.created_at).toLocaleDateString()}</td>
-                      <td className="py-3 px-4">${order.total_amount?.toFixed(2) ?? 'N/A'}</td>
+                      <td className="py-3 px-4">${order.total_amount?.toFixed(2) ?? "N/A"}</td>
                       <td className="py-3 px-4">
                         <span
                           className={`inline-block px-2 py-1 rounded-full text-xs ${

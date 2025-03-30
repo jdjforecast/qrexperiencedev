@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
-import { Database } from '../database.types'
+import { createClient } from "@supabase/supabase-js"
+import type { Database } from "../database.types"
 
 export function createServerClientForApi() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -9,11 +9,12 @@ export function createServerClientForApi() {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
-      detectSessionInUrl: false
-    }
+      detectSessionInUrl: false,
+    },
   })
 }
 
 export const supabaseServerApi = createServerClientForApi()
 
-export default supabaseServerApi 
+export default supabaseServerApi
+

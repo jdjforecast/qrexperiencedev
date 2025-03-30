@@ -1,18 +1,17 @@
 import { supabaseClient } from "@/lib/supabase/client-utils"
-import { getUserCart } from "@/lib/user-service"
 
 // Define type for cart items based on the select in getUserCart
 interface CartItem {
-  id: string; // Or number, depending on your DB schema
-  quantity: number;
-  product_id: string; // Or number
+  id: string // Or number, depending on your DB schema
+  quantity: number
+  product_id: string // Or number
   products: {
-    id: string; // Or number
-    name: string;
-    description: string | null;
-    price: number;
-    image_url: string | null;
-  } | null; // products might be null if relation fails or isn't required
+    id: string // Or number
+    name: string
+    description: string | null
+    price: number
+    image_url: string | null
+  } | null // products might be null if relation fails or isn't required
 }
 
 // Función para agregar un producto al carrito desde un código QR
@@ -45,17 +44,17 @@ export async function addProductToCartFromQR(productId: string) {
     // --- Performance Improvement: Check if item already exists efficiently --- //
     const { count: existingCount, error: checkError } = await supabaseClient
       .from("cart_items")
-      .select('id', { count: 'exact', head: true }) // Efficient count query
-      .eq('user_id', userId)
-      .eq('product_id', productId);
+      .select("id", { count: "exact", head: true }) // Efficient count query
+      .eq("user_id", userId)
+      .eq("product_id", productId)
 
     if (checkError) {
-      console.error("Error checking for existing cart item:", checkError);
-      throw new Error("Error al verificar el carrito");
+      console.error("Error checking for existing cart item:", checkError)
+      throw new Error("Error al verificar el carrito")
     }
 
     if (existingCount !== null && existingCount > 0) {
-      throw new Error("Ya tienes este producto en tu carrito. Solo puedes agregar 1 unidad por referencia.");
+      throw new Error("Ya tienes este producto en tu carrito. Solo puedes agregar 1 unidad por referencia.")
     }
     // --- End Performance Improvement --- //
 
@@ -68,7 +67,7 @@ export async function addProductToCartFromQR(productId: string) {
 
     if (insertError) {
       // Log the detailed error for debugging
-      console.error("Supabase insert error:", insertError);
+      console.error("Supabase insert error:", insertError)
       throw new Error("Error al agregar el producto al carrito")
     }
 
@@ -78,7 +77,7 @@ export async function addProductToCartFromQR(productId: string) {
     }
   } catch (error) {
     // Log the error for debugging
-    console.error("addProductToCartFromQR error:", error);
+    console.error("addProductToCartFromQR error:", error)
     if (error instanceof Error) {
       return {
         success: false,

@@ -36,7 +36,10 @@ export async function GET(request: Request) {
     const supabase = await createServerClient()
 
     // Get the user session from Supabase
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
     if (sessionError) {
       console.error("Error getting Supabase session:", sessionError)
@@ -51,7 +54,7 @@ export async function GET(request: Request) {
     const isAdmin = await isUserAdmin(session.user.id)
 
     if (!isAdmin) {
-      console.warn(`User ${session.user.id} attempted to access QR analytics without admin role.`);
+      console.warn(`User ${session.user.id} attempted to access QR analytics without admin role.`)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

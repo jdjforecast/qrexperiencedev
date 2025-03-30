@@ -5,9 +5,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient, isUserAdmin } from "@/lib/auth/server-api"
 // Adjust import: Use getProduct from service for GET
 import { getProduct } from "@/lib/product-service"
-import { updateProduct, deleteProduct, getProductById } from "@/lib/storage/products"
+import { updateProduct, deleteProduct } from "@/lib/storage/products"
 import { ProductSchema } from "@/types/schemas"
-import type { Product } from "@/types/product"
 
 // Remove Supabase client imports if getProduct handles its own client
 // import { cookies } from "next/headers"
@@ -41,7 +40,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     return NextResponse.json(validation.data)
-
   } catch (error) {
     console.error(`Unexpected error in GET /api/products/${id}:`, error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -59,7 +57,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     // 1. Authentication & Authorization
     const supabase = await createServerClient()
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
     if (sessionError) {
       console.error("Error getting Supabase session:", sessionError)
@@ -74,7 +75,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     // 2. Parse Request Body
-    let updateData: unknown;
+    let updateData: unknown
     try {
       updateData = await request.json()
     } catch (e) {
@@ -85,8 +86,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const validation = ProductSchema.partial().safeParse(updateData)
 
     if (!validation.success) {
-      console.error("Update validation failed:", validation.error.errors);
-      return NextResponse.json({ error: "Invalid product data", details: validation.error.flatten().fieldErrors }, { status: 400 })
+      console.error("Update validation failed:", validation.error.errors)
+      return NextResponse.json(
+        { error: "Invalid product data", details: validation.error.flatten().fieldErrors },
+        { status: 400 },
+      )
     }
 
     // Ensure we don't try to update id or created_at
@@ -97,10 +101,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const validatedUpdates: any = {}
     for (const key in validatedInput) {
       if (Object.prototype.hasOwnProperty.call(validatedInput, key)) {
-        const value = validatedInput[key as keyof typeof validatedInput];
-        if (value !== null) { // Only include non-null values
-           // Assign directly using the key
-          validatedUpdates[key] = value;
+        const value = validatedInput[key as keyof typeof validatedInput]
+        if (value !== null) {
+          // Only include non-null values
+          // Assign directly using the key
+          validatedUpdates[key] = value
         } else {
           // Explicitly set to undefined if you want to clear the field via update
           // Or omit the key if null means "do not update this field"
@@ -110,7 +115,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     if (Object.keys(validatedUpdates).length === 0) {
-        return NextResponse.json({ error: "No valid fields provided for update (after null check)" }, { status: 400 });
+      return NextResponse.json({ error: "No valid fields provided for update (after null check)" }, { status: 400 })
     }
 
     // 4. Call Service Function
@@ -119,14 +124,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (updateError) {
       console.error(`Error updating product ${id}:`, updateError)
       if (updateError.message.includes("not found")) {
-          return NextResponse.json({ error: "Product not found" }, { status: 404 })
+        return NextResponse.json({ error: "Product not found" }, { status: 404 })
       }
       return NextResponse.json({ error: "Failed to update product" }, { status: 500 })
     }
 
     // 5. Return Response
     return NextResponse.json(updatedProduct)
-
   } catch (error) {
     console.error(`Unexpected error in PUT /api/products/${id}:`, error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -144,7 +148,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     // 1. Authentication & Authorization
     const supabase = await createServerClient()
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
     if (sessionError) {
       console.error("Error getting Supabase session:", sessionError)
@@ -164,16 +171,16 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (deleteError) {
       console.error(`Error deleting product ${id}:`, deleteError)
       if (deleteError.message.includes("not found")) {
-          return NextResponse.json({ error: "Product not found" }, { status: 404 })
+        return NextResponse.json({ error: "Product not found" }, { status: 404 })
       }
       return NextResponse.json({ error: "Failed to delete product" }, { status: 500 })
     }
 
     // 3. Return Response
     return NextResponse.json({ message: "Product deleted successfully" }, { status: 200 })
-
   } catch (error) {
     console.error(`Unexpected error in DELETE /api/products/${id}:`, error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
-} 
+}
+

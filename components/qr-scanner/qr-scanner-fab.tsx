@@ -83,7 +83,7 @@ export default function QrScannerFab() {
     setShowScanner(false)
     setScannerLoaded(false) // Ensure scanner stops trying to load
     // Ensure body scroll is restored
-    document.body.style.overflow = "auto"; 
+    document.body.style.overflow = "auto"
 
     console.log("FAB QR scanned (expecting URL):", decodedText)
 
@@ -110,13 +110,13 @@ export default function QrScannerFab() {
         console.log("Opening external URL:", decodedText)
         window.open(decodedText, "_blank", "noopener,noreferrer")
         // Optionally show a toast message about opening an external link
-        toast("Abriendo enlace externo...") 
+        toast("Abriendo enlace externo...")
       }
     } catch (error) {
       // Not a valid URL - show error message (or potentially ignore)
       console.warn("Scanned text is not a valid URL:", decodedText, error)
       // Use toast for non-blocking error notification instead of alert
-      toast.error("Código QR no contiene una URL válida.") 
+      toast.error("Código QR no contiene una URL válida.")
     }
   }
 
@@ -124,10 +124,10 @@ export default function QrScannerFab() {
     // Only log errors, don't bother the user unless necessary
     // console.error("FAB QR Scan Error:", errorMessage);
     if (errorMessage.includes("Camera access denied")) {
-        setError("Acceso a la cámara denegado. Por favor, permite el acceso en la configuración de tu navegador.")
-        // Consider stopping scan/closing modal if permission denied?
-    } else if (errorMessage.includes("NotAllowedError")) { 
-        setError("Permiso para usar la cámara denegado.")
+      setError("Acceso a la cámara denegado. Por favor, permite el acceso en la configuración de tu navegador.")
+      // Consider stopping scan/closing modal if permission denied?
+    } else if (errorMessage.includes("NotAllowedError")) {
+      setError("Permiso para usar la cámara denegado.")
     }
     // Ignore other common errors like "No QR code found"
   }

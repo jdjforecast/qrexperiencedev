@@ -32,24 +32,24 @@ export default function AllProductsCatalogPage() {
       try {
         // *** FETCH DIRECTLY USING SUPABASE CLIENT ***
         const { data, error: dbError } = await supabase
-          .from('products')
-          .select('id, name, description, price, image_url, stock, short_code') // Select needed fields
-          .order('name', { ascending: true }) // Optional: order products
+          .from("products")
+          .select("id, name, description, price, image_url, stock, short_code") // Select needed fields
+          .order("name", { ascending: true }) // Optional: order products
 
         if (dbError) {
           // Throw the database error to be caught below
-          throw dbError;
+          throw dbError
         }
 
         // Ensure the data includes short_code (should be guaranteed by select)
-        if (data && data.length > 0 && typeof data[0].short_code === 'undefined') {
-           console.warn("Supabase query result might be missing 'short_code'. Check select statement.");
+        if (data && data.length > 0 && typeof data[0].short_code === "undefined") {
+          console.warn("Supabase query result might be missing 'short_code'. Check select statement.")
         }
-        
-        // Filter out products without short_code just in case
-        setProducts(data?.filter(p => p.short_code) || []);
 
-      } catch (err: any) { // Catch SupabaseError or other errors
+        // Filter out products without short_code just in case
+        setProducts(data?.filter((p) => p.short_code) || [])
+      } catch (err: any) {
+        // Catch SupabaseError or other errors
         console.error("Error loading all products directly from Supabase:", err)
         setError(err.message || "An unexpected error occurred fetching products")
       } finally {
@@ -58,12 +58,12 @@ export default function AllProductsCatalogPage() {
     }
 
     loadAllProducts()
-  // Add supabase client as dependency if required by linting rules, although it's stable
-  }, [supabase]) 
+    // Add supabase client as dependency if required by linting rules, although it's stable
+  }, [supabase])
 
   return (
     // This catalog might be public or require auth depending on your needs
-    <RouteGuard requireAuth> 
+    <RouteGuard requireAuth>
       <div className="container mx-auto p-4">
         <h1 className="mb-6 text-3xl font-bold text-white text-center">Catálogo Completo</h1>
 
@@ -104,13 +104,17 @@ export default function AllProductsCatalogPage() {
                   )}
                 </div>
                 <div className="p-4 text-gray-900">
-                  <h2 className="mb-1 truncate text-base font-semibold" title={product.name}>{product.name}</h2>
+                  <h2 className="mb-1 truncate text-base font-semibold" title={product.name}>
+                    {product.name}
+                  </h2>
                   <p className="mb-2 text-lg font-bold text-gray-800">${product.price.toFixed(2)}</p>
-                   <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  <span
+                    className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
                       product.stock > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                    }`}> 
-                      {product.stock > 0 ? "En stock" : "Agotado"}
-                   </span>
+                    }`}
+                  >
+                    {product.stock > 0 ? "En stock" : "Agotado"}
+                  </span>
                 </div>
               </Link>
             ))}
@@ -119,4 +123,5 @@ export default function AllProductsCatalogPage() {
       </div>
     </RouteGuard>
   )
-} 
+}
+

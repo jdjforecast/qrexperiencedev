@@ -5,12 +5,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { CoinBalance } from "@/components/ui/coin-balance"
-import { 
-  ArrowLeft, ShoppingCart, Menu, X, QrCode, 
-  LogIn, UserCircle, LogOut, Home, Package
-} from "lucide-react"
+import { ArrowLeft, ShoppingCart, Menu, X, QrCode, LogIn, UserCircle, LogOut, Home, Package } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { NestleLogo } from "@/components/ui/nestle-logo"
 import { PharmaSummitLogo } from "@/components/ui/pharma-summit-logo"
 import { useScanner } from "@/contexts/scanner-context"
 import { useAuth } from "@/hooks/auth"
@@ -73,11 +69,11 @@ function CartButton({ count = 0, onClick }: { count: number; onClick: () => void
  */
 function ScanButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button 
-      variant="ghost" 
-      size="icon" 
-      className="relative hover:bg-white/10 transition-colors" 
-      onClick={onClick} 
+    <Button
+      variant="ghost"
+      size="icon"
+      className="relative hover:bg-white/10 transition-colors"
+      onClick={onClick}
       aria-label="Escanear código QR"
     >
       <QrCode className="h-6 w-6" />
@@ -120,12 +116,7 @@ function SideMenu({
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="hover:bg-white/10 transition-colors" 
-          aria-label="Menú principal"
-        >
+        <Button variant="ghost" size="icon" className="hover:bg-white/10 transition-colors" aria-label="Menú principal">
           <Menu className="h-6 w-6" />
         </Button>
       </SheetTrigger>
@@ -216,7 +207,7 @@ function SideMenu({
               </>
             )}
           </nav>
-          
+
           <div className="mt-auto text-center pt-4 border-t border-white/10 text-xs opacity-70">
             <p>© 2024 Mi Partner App</p>
             <p>Developed by KOROVA MB</p>
@@ -230,13 +221,7 @@ function SideMenu({
 /**
  * Componente principal del encabezado de la aplicación
  */
-export function AppHeader({
-  title,
-  showBackButton = false,
-  onBackClick,
-  cartCount = 0,
-  onCartClick,
-}: AppHeaderProps) {
+export function AppHeader({ title, showBackButton = false, onBackClick, cartCount = 0, onCartClick }: AppHeaderProps) {
   const router = useRouter()
   const { openScanner } = useScanner()
   const { user, profile, signOut, isAuthenticated } = useAuth()
@@ -276,11 +261,9 @@ export function AppHeader({
   const currentCoins = profile?.coins ?? null
 
   return (
-    <header 
+    <header
       className={`fixed top-0 left-0 right-0 z-30 w-full transition-all duration-300 backdrop-blur-sm ${
-        isScrolled 
-        ? "bg-primary/95 shadow-md py-2" 
-        : "bg-primary/85 py-3"
+        isScrolled ? "bg-primary/95 shadow-md py-2" : "bg-primary/85 py-3"
       }`}
     >
       <div className="container-wide flex items-center justify-between">
@@ -309,7 +292,7 @@ export function AppHeader({
           />
         </div>
       </div>
-      
+
       {title && (
         <div className="w-full text-center mt-1 pb-1">
           <h1 className="text-lg font-semibold animate-fade-in">{title}</h1>

@@ -6,6 +6,8 @@ import { LogOut, Home, ShoppingCart, User, Settings } from "lucide-react"
 import { supabaseClient } from "@/lib/supabase/client-utils"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/components/auth/AuthProvider"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -14,6 +16,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { isLoading } = useAuth()
 
   const handleSignOut = async () => {
     try {
@@ -32,6 +35,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         variant: "destructive",
       })
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
   }
 
   return (

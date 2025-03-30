@@ -16,15 +16,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  output: 'standalone',
   experimental: {
-    webpackBuildWorker: false,
-    parallelServerBuildTraces: false,
-    parallelServerCompiles: false,
+    webpackBuildWorker: true,
+    parallelServerBuildTraces: true,
+    parallelServerCompiles: true,
   },
-  // Disable static generation for routes that need dynamic data
-  skipTrailingSlashRedirect: true,
-  skipMiddlewareUrlNormalize: true,
 }
 
 mergeConfig(nextConfig, userConfig)

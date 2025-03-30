@@ -18,7 +18,7 @@ export default function MigrationsPage() {
 
     try {
       // Check if the code column exists
-      const { error } = await supabaseClient.rpc('run_migration')
+      const { error } = await supabaseClient.rpc("run_migration")
 
       if (error) {
         setResult({

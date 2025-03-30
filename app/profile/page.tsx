@@ -4,27 +4,27 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/auth"
 import { getUserProfile } from "@/lib/user-service"
 import RouteGuard from "@/components/auth/route-guard"
-import { 
-  PageTemplate, 
-  PageContent, 
-  SectionTitle, 
-  LoadingMessage, 
-  ErrorMessage, 
-  Card 
+import {
+  PageTemplate,
+  PageContent,
+  SectionTitle,
+  LoadingMessage,
+  ErrorMessage,
+  Card,
 } from "@/components/ui/page-template"
 import { PageTransition, AnimateOnView } from "@/components/ui/page-transition"
 import { User, Building, Mail, Key, Calendar, Award } from "lucide-react"
 
 // Define Profile type inline or import if defined elsewhere
 interface ProfileData {
-    id: string;
-    role: 'customer' | 'admin' | string;
-    full_name?: string;
-    company_name?: string;
-    coins?: number;
-    email?: string;
-    created_at?: string;
-    [key: string]: any;
+  id: string
+  role: "customer" | "admin" | string
+  full_name?: string
+  company_name?: string
+  coins?: number
+  email?: string
+  created_at?: string
+  [key: string]: any
 }
 
 export default function ProfilePage() {
@@ -43,13 +43,13 @@ export default function ProfilePage() {
       try {
         setIsLoading(true)
         const profileData = await getUserProfile(user.id)
-        
+
         if (!profileData) {
           setError("No se encontró información de perfil detallada")
         } else {
           setProfile({
             ...profileData,
-            email: user.email
+            email: user.email,
           })
         }
       } catch (err) {
@@ -68,28 +68,21 @@ export default function ProfilePage() {
   // Formatear fecha en formato legible
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A"
-    
+
     const date = new Date(dateString)
-    return new Intl.DateTimeFormat('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Intl.DateTimeFormat("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     }).format(date)
   }
 
   return (
     <RouteGuard>
-      <PageTemplate 
-        title="Perfil de Usuario" 
-        showBackButton 
-        activeTab="profile"
-      >
+      <PageTemplate title="Perfil de Usuario" showBackButton activeTab="profile">
         <PageTransition>
           <PageContent>
-            <SectionTitle 
-              title="Mi perfil" 
-              subtitle="Información personal y detalles de tu cuenta" 
-            />
+            <SectionTitle title="Mi perfil" subtitle="Información personal y detalles de tu cuenta" />
 
             {isLoading ? (
               <LoadingMessage message="Cargando tu perfil..." />
@@ -109,11 +102,9 @@ export default function ProfilePage() {
                           <User className="h-12 w-12 text-white/70" />
                         </div>
                       </div>
-                      
+
                       <div className="flex-grow p-4">
-                        <h2 className="text-2xl font-bold text-white">
-                          {profile.full_name || "Usuario"}
-                        </h2>
+                        <h2 className="text-2xl font-bold text-white">{profile.full_name || "Usuario"}</h2>
                         <div className="flex flex-wrap gap-3 mt-2">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-light/30">
                             {profile.role === "admin" ? "Administrador" : "Cliente"}
@@ -129,7 +120,7 @@ export default function ProfilePage() {
                     </div>
                   </Card>
                 </AnimateOnView>
-                
+
                 <AnimateOnView delay={0.2}>
                   <Card>
                     <div className="p-4">
@@ -137,14 +128,14 @@ export default function ProfilePage() {
                         <Mail className="h-5 w-5 mr-2 text-white/70" />
                         Información de Contacto
                       </h3>
-                      
+
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="bg-white/10 p-3 rounded-lg">
                             <p className="text-sm text-white/60 mb-1">Email</p>
                             <p className="font-medium">{profile.email || "No especificado"}</p>
                           </div>
-                          
+
                           <div className="bg-white/10 p-3 rounded-lg">
                             <p className="text-sm text-white/60 mb-1">Empresa</p>
                             <div className="font-medium flex items-center">
@@ -163,7 +154,7 @@ export default function ProfilePage() {
                     </div>
                   </Card>
                 </AnimateOnView>
-                
+
                 <AnimateOnView delay={0.3}>
                   <Card>
                     <div className="p-4">
@@ -171,7 +162,7 @@ export default function ProfilePage() {
                         <Key className="h-5 w-5 mr-2 text-white/70" />
                         Detalles de Cuenta
                       </h3>
-                      
+
                       <div className="bg-white/10 p-3 rounded-lg">
                         <p className="text-sm text-white/60 mb-1">Miembro desde</p>
                         <div className="font-medium flex items-center">

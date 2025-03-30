@@ -2,257 +2,200 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth/AuthProvider"
-import { getUserCart } from "@/lib/cart"
-import { createOrder } from "@/lib/orders"
-import RouteGuard from "@/components/auth/route-guard"
-import LoadingSpinner from "@/components/ui/loading-spinner"
-import type { CartItem } from "@/types/cart"
+import Link from "next/link"
+import { useCart } from "@/components/cart/CartProvider"
+import { getCurrentUser, dataAPI } from "@/lib/supabase"
 
 export default function CheckoutPage() {
+  const { items, totalPrice, clearCart } = useCart()
   const router = useRouter()
-  const { user, profile } = useAuth()
-
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [formData, setFormData] = useState({
+    fullName: "",
+    companyName: "",
+    email: "",
+    phone: "",
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Datos de envío
-  const [address, setAddress] = useState("")
-  const [city, setCity] = useState("")
-  const [postalCode, setPostalCode] = useState("")
-  const [phone, setPhone] = useState("")
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <h1 className="text-2xl font-bold mb-6">Checkout</h1>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <p className="text-center text-gray-600">
+            Tu carrito está vacío. Por favor agrega productos antes de proceder al checkout.
+          </p>
+          <div className="mt-6 text-center">
+            <Link href="/scan" className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
+              Escanear Productos
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-  useEffect(() => {
-    async function loadCart() {
-      if (!user) return
-
-      try {
-        setIsLoading(true)
-        const result = await getUserCart(user.id)
-
-        if (result.success) {
-          if (!result.data || result.data.length === 0) {
-            // Si el carrito está vacío, redirigir al carrito
-            router.push("/cart")
-            return
-          }
-
-          setCartItems(result.data)
-        } else {
-          setError(result.error || "Error al cargar el carrito")
-        }
-      } catch (err) {
-        console.error("Error al cargar el carrito:", err)
-        setError("Error inesperado al cargar el carrito")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadCart()
-  }, [user, router])
-
-  const calculateTotal = () => {
-    return cartItems.reduce((total, item) => {
-      const product = item.products?.[0];
-      if (!product) return total;
-      return total + product.price * item.quantity
-    }, 0)
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!user) return
+    setIsSubmitting(true)
+    setError(null)
 
     try {
-      setIsProcessing(true)
-      setError(null)
+      // Get current user
+      const user = await getCurrentUser()
 
-      const total = calculateTotal()
-      const result = await createOrder(user.id, cartItems, total, { address, city, postalCode, phone })
-
-      if (result.success) {
-        router.push(`/orders/${result.data.id}`)
-      } else {
-        setError(result.error || "Error al procesar el pedido")
+      if (!user) {
+        throw new Error("Debes iniciar sesión para completar la compra")
       }
-    } catch (err) {
-      console.error("Error al procesar el pedido:", err)
-      setError("Error inesperado al procesar el pedido")
+
+      // Create order items from cart
+      const orderItems = items.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      }))
+
+      // Create order in database
+      const order = await dataAPI.createOrder(user.id, orderItems)
+
+      // Clear cart after successful order
+      clearCart()
+
+      // Redirect to invoice page
+      router.push(`/invoice/${order.id}`)
+    } catch (err: any) {
+      console.error("Checkout error:", err)
+      setError(err.message || "Error al procesar la orden. Por favor intenta nuevamente.")
     } finally {
-      setIsProcessing(false)
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <RouteGuard requireAuth>
-      <div className="container mx-auto p-4">
-        <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
+    <div className="container mx-auto py-8 px-4">
+      <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 
-        {isLoading ? (
-          <div className="flex justify-center">
-            <LoadingSpinner />
-          </div>
-        ) : error ? (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div>
-              <div className="rounded-lg bg-white p-6 shadow-md">
-                <h2 className="mb-4 text-lg font-semibold">Información de Envío</h2>
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-2">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Información de Contacto</h2>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                      Nombre Completo
-                    </label>
-                    <input
-                      id="name"
-                      type="text"
-                      value={profile?.full_name || ""}
-                      disabled
-                      className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 shadow-sm"
-                    />
-                  </div>
+            {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
 
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      Correo Electrónico
-                    </label>
-                    <input
-                      id="email"
-                      type="email"
-                      value={profile?.email || ""}
-                      disabled
-                      className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 shadow-sm"
-                    />
-                  </div>
+            <form onSubmit={handleSubmit}>
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label htmlFor="fullName" className="block text-sm font-medium mb-1">
+                    Nombre Completo *
+                  </label>
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    required
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
 
-                  <div>
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                      Dirección
-                    </label>
-                    <input
-                      id="address"
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      required
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="city" className="block text-sm font-medium text-gray-700">
-                        Ciudad
-                      </label>
-                      <input
-                        id="city"
-                        type="text"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        required
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700">
-                        Código Postal
-                      </label>
-                      <input
-                        id="postalCode"
-                        type="text"
-                        value={postalCode}
-                        onChange={(e) => setPostalCode(e.target.value)}
-                        required
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                      Teléfono
-                    </label>
-                    <input
-                      id="phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="w-full rounded-md bg-blue-600 px-4 py-2 text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-                  >
-                    {isProcessing ? "Procesando..." : "Completar Pedido"}
-                  </button>
-                </form>
+                <div>
+                  <label htmlFor="companyName" className="block text-sm font-medium mb-1">
+                    Nombre de la Empresa *
+                  </label>
+                  <input
+                    id="companyName"
+                    name="companyName"
+                    type="text"
+                    required
+                    value={formData.companyName}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <div className="rounded-lg bg-white p-6 shadow-md">
-                <h2 className="mb-4 text-lg font-semibold">Resumen del Pedido</h2>
-
-                <ul className="mb-4 divide-y divide-gray-200">
-                  {cartItems.map((item) => {
-                    const product = item.products?.[0];
-                    return (
-                    <li key={item.id} className="py-2">
-                      <div className="flex justify-between">
-                        <div>
-                          <span className="font-medium">{product?.name || "Producto Desconocido"}</span>
-                          <span className="ml-2 text-gray-600">x{item.quantity}</span>
-                        </div>
-                        <span>${( (product?.price || 0) * item.quantity ).toFixed(2)}</span>
-                      </div>
-                    </li>
-                    );
-                  })}
-                </ul>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>${calculateTotal().toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Envío</span>
-                    <span>Gratis</span>
-                  </div>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-1">
+                    Email *
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded"
+                  />
                 </div>
 
-                <div className="my-4 border-t border-gray-200 pt-4">
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
-                    <span>${calculateTotal().toFixed(2)}</span>
-                  </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium mb-1">
+                    Teléfono
+                  </label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded"
+                  />
                 </div>
+              </div>
+
+              <div className="flex justify-between">
+                <Link href="/cart" className="text-blue-600 hover:text-blue-800">
+                  Volver al Carrito
+                </Link>
 
                 <button
-                  onClick={() => router.push("/cart")}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  Volver al Carrito
+                  {isSubmitting ? "Procesando..." : "Completar Compra"}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div className="md:col-span-1">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Resumen de Orden</h2>
+
+            <div className="divide-y">
+              {items.map((item) => (
+                <div key={item.id} className="py-3 flex justify-between">
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-gray-600">Cantidad: {item.quantity}</p>
+                  </div>
+                  <div className="font-medium">${(item.price * item.quantity).toFixed(2)}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex justify-between text-lg font-bold">
+                <span>Total</span>
+                <span>${totalPrice.toFixed(2)}</span>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
-    </RouteGuard>
+    </div>
   )
 }
 
