@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, type ReactNode } from "react"
-import { ScannerModal } from "@/components/ScannerModal"
+import { ScannerModal } from "@/components/ui/scanner-modal"
 
 interface ScannerContextType {
   openScanner: () => void
