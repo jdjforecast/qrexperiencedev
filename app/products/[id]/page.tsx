@@ -11,20 +11,26 @@ interface Product {
   image_url: string | null
   stock: number
   code: string
-  short_code: string
+  short_code: string | null
+  urlpage?: string | null
 }
 
 interface ProductPageProps {
-  params: { code: string }
+  params: { id: string }
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const code = params.code
-  console.log(`[ProductPage Server] Received short_code param: "${code}"`);
+  const urlpageSlug = params.id
+  console.log(`[ProductPage Server] Received urlpageSlug param: "${urlpageSlug}"`);
+
+  if (!urlpageSlug || urlpageSlug.trim() === "") {
+    console.warn(`[ProductPage Server] Received empty or invalid urlpageSlug.`);
+    notFound();
+  }
 
   const supabase = createServerClientForApi()
 
-  console.log(`[ProductPage Server] Attempting to fetch product with short_code: "${code}"`);
+  console.log(`[ProductPage Server] Attempting to fetch product with urlpage: "${urlpageSlug}"`);
 
   let product: Product | null = null;
   let fetchError: any = null;
@@ -33,7 +39,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .eq('short_code', code)
+      .eq('urlpage', urlpageSlug)
       .single<Product>()
     
     product = data;
@@ -45,16 +51,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   if (fetchError) {
-    console.error("[ProductPage Server] Supabase fetch error object:", JSON.stringify(fetchError, null, 2));
+    if (fetchError.code === 'PGRST116') {
+         console.warn(`[ProductPage Server] Product not found in DB for urlpage: "${urlpageSlug}" (PGRST116)`);
+    } else {
+        console.error("[ProductPage Server] Supabase fetch error object:", JSON.stringify(fetchError, null, 2));
+    }
     notFound()
   }
 
   if (!product) {
-    console.warn(`[ProductPage Server] Product not found in DB for short_code: "${code}"`);
+    console.warn(`[ProductPage Server] Product query succeeded but returned null/undefined for urlpage: "${urlpageSlug}"`);
     notFound()
   }
 
-  console.log(`[ProductPage Server] Product found: ${product.name} (ID: ${product.id}, short_code: ${product.short_code}). Rendering client component.`);
+  console.log(`[ProductPage Server] Product found: ${product.name} (ID: ${product.id}, urlpage: ${product.urlpage}). Rendering client component.`);
 
   return (
     <div className="container mx-auto p-4">
@@ -64,14 +74,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const code = params.code
+  const urlpageSlug = params.id
+  if (!urlpageSlug || urlpageSlug.trim() === "") {
+    return { title: "Identificador de Producto Inválido" };
+  }
+  
   const supabase = createServerClientForApi()
 
   const { data: product } = await supabase
     .from("products")
-    .select("name, description, short_code")
-    .eq('short_code', code)
-    .single<Pick<Product, "name" | "description" | "short_code">>()
+    .select("id, name, description, urlpage")
+    .eq('urlpage', urlpageSlug)
+    .single<Pick<Product, "id" | "name" | "description" | "urlpage">>()
 
   if (!product) {
     return {
@@ -79,9 +93,14 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     }
   }
 
+  const canonicalPath = product.urlpage;
+
   return {
     title: product.name,
     description: product.description || "Sin descripción disponible",
+    alternates: {
+      canonical: canonicalPath ? `/products/${canonicalPath}` : undefined,
+    },
   }
 }
 
