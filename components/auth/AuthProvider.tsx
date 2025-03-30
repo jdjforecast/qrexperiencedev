@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Fetch profile data from Supabase
       if (session.user.id) {
         const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
+          .from('users')
           .select('*')
           .eq('id', session.user.id)
           .single();
