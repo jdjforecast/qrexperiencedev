@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import QrScanner from "@/components/QrScanner"
-import QrGenerator from "@/components/QrGenerator"
 import ProductDisplay from "@/components/ProductDisplay"
 import { toast } from "react-hot-toast"
 import { getProductById } from "@/lib/api/products"
@@ -25,7 +24,6 @@ export default function QRTestPage() {
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null)
   const [isLoadingProduct, setIsLoadingProduct] = useState(false)
   const [testProductId, setTestProductId] = useState<string>("")
-  const [generatedQR, setGeneratedQR] = useState<any | null>(null)
 
   // Función para manejar el escaneo exitoso de un QR
   const handleScanSuccess = async (product: Product) => {
@@ -91,12 +89,6 @@ export default function QRTestPage() {
     }
   }
 
-  // Función para manejar la generación exitosa de un QR
-  const handleQRGenerated = (qrData: any) => {
-    setGeneratedQR(qrData)
-    console.log("QR generado:", qrData)
-  }
-
   return (
     <div className="container py-8 px-4">
       <BackButton />
@@ -113,10 +105,6 @@ export default function QRTestPage() {
           <TabsTrigger value="scanner" className="flex items-center gap-1">
             <Smartphone size={16} />
             Escáner QR
-          </TabsTrigger>
-          <TabsTrigger value="generator" className="flex items-center gap-1">
-            <QrCode size={16} />
-            Generador QR
           </TabsTrigger>
           <TabsTrigger value="product-test" className="flex items-center gap-1">
             <Database size={16} />
@@ -149,60 +137,6 @@ export default function QRTestPage() {
               />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="generator" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuración de QR</CardTitle>
-                <CardDescription>Ingresa un ID de producto para generar su QR</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium block mb-1">ID del Producto</label>
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Ingresa el ID del producto"
-                        value={testProductId}
-                        onChange={(e) => setTestProductId(e.target.value)}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={loadTestProduct}
-                        disabled={isLoadingProduct || !testProductId}
-                      >
-                        Verificar
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      El ID debe corresponder a un producto existente en la base de datos.
-                    </p>
-                  </div>
-
-                  {scannedProduct && (
-                    <div className="border p-3 rounded-md">
-                      <h3 className="font-medium mb-1">{scannedProduct.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{scannedProduct.description}</p>
-                      <p className="text-sm font-semibold">${scannedProduct.price?.toFixed(2) || "0.00"}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {testProductId && (
-              <QrGenerator
-                productId={testProductId}
-                productName={scannedProduct?.name || "Producto de prueba"}
-                onGenerated={handleQRGenerated}
-              />
-            )}
-          </div>
         </TabsContent>
 
         <TabsContent value="product-test" className="space-y-6">
