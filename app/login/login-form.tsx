@@ -1,16 +1,21 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { signInWithEmail } from "@/lib/auth"
+import { getAuthFunctions } from "@/lib/auth-client"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-export default function LoginForm({ redirectPath }: { redirectPath?: string }) {
+export default function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const auth = getAuthFunctions()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,70 +23,77 @@ export default function LoginForm({ redirectPath }: { redirectPath?: string }) {
     setLoading(true)
 
     try {
-      const result = await signInWithEmail(email, password)
+      const { session } = await auth.signInWithEmail(email, password)
 
-      if (result.success) {
-        // Forzar una recarga completa para asegurar que la sesión se actualice correctamente
-        window.location.href = redirectPath || "/dashboard"
-      } else {
-        setError(result.message)
+      if (session) {
+        // Redirigir a la página original o al dashboard
+        const redirectTo = searchParams.get("redirect") || "/dashboard"
+        router.push(redirectTo)
       }
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
-      console.error("Login error:", err)
+    } catch (error: any) {
+      console.error("Error during login:", error)
+      setError(error.message || "Error al iniciar sesión")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <div className="bg-red-50 p-4 rounded-md text-red-500 text-sm">{error}</div>}
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle>Iniciar Sesión</CardTitle>
+        <CardDescription>Ingresa a tu cuenta para continuar</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium mb-1">
+              Email
+            </label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-        />
-      </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium mb-1">
+              Contraseña
+            </label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-        />
-      </div>
+          {error && (
+            <div className="text-red-600 text-sm">{error}</div>
+          )}
 
-      <div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </div>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+          </Button>
 
-      <div className="text-sm text-center">
-        <Link href="/register" className="text-indigo-600 hover:text-indigo-500">
-          Don&apos;t have an account? Register
-        </Link>
-      </div>
-    </form>
+          <div className="text-center text-sm">
+            <Link href="/register" className="text-blue-600 hover:underline">
+              ¿No tienes una cuenta? Regístrate
+            </Link>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
 

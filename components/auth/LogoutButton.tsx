@@ -1,47 +1,47 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useState } from "react"
+import { getAuthFunctions } from "@/lib/auth-client"
+import { Button } from "@/components/ui/button"
 
-export default function LogoutButton() {
+export function LogoutButton() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClientComponentClient()
-
+  const auth = getAuthFunctions()
+  
   const handleLogout = async () => {
     try {
       setIsLoading(true)
-
-      // 1. Cerrar sesión en Supabase
-      await supabase.auth.signOut()
-
-      // 2. Limpiar localStorage
+      
+      // Cerrar sesión
+      await auth.signOut()
+      
+      // Limpiar cualquier estado local
       localStorage.clear()
-
-      // 3. Limpiar sessionStorage
       sessionStorage.clear()
-
-      // 4. Forzar recarga de la página para limpiar caché de Next.js
+      
+      // Limpiar cookies del servidor
+      await fetch("/api/clear-cache", { method: "POST" })
+      
+      // Redireccionar con refresh forzado
       router.push("/login?forceRefresh=true")
-
-      // 5. Forzar recarga completa del navegador
-      window.location.href = "/login?forceRefresh=true"
     } catch (error) {
-      console.error("Error al cerrar sesión:", error)
+      console.error("Error during logout:", error)
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <button
+    <Button 
       onClick={handleLogout}
       disabled={isLoading}
-      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors"
+      variant="ghost"
+      size="sm"
     >
       {isLoading ? "Cerrando sesión..." : "Cerrar sesión"}
-    </button>
+    </Button>
   )
 }
 
