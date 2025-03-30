@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import RouteGuard from "@/components/auth/route-guard"
 import LoadingSpinner from "@/components/ui/loading-spinner"
-import { getBrowserClient } from "@/lib/supabase-client" // *** USE THE CORRECT SINGLETON CLIENT ***
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 
 // Reuse the Product interface (ensure it includes short_code)
 interface Product {

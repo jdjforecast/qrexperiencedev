@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Search, Edit, Trash2, Eye } from "lucide-react"
-import { executeWithRetry } from "@/lib/supabase-client"
-import { createBrowserClient } from "@/lib/supabase-client"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 import { useToast } from "@/components/ui/use-toast"
 
 interface Product {
@@ -19,6 +18,28 @@ interface Product {
   stock: number
   is_active: boolean
   created_at: string
+}
+
+// Función de utilidad para reintentos
+async function executeWithRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+      }
+    }
+  }
+  
+  throw lastError;
 }
 
 export default function ProductsTable() {
@@ -41,7 +62,7 @@ export default function ProductsTable() {
     try {
       await executeWithRetry(
         async () => {
-          const supabase = createBrowserClient()
+          const supabase = getBrowserClient()
 
           const query = supabase.from("products").select("*").order("created_at", { ascending: false })
 
@@ -71,7 +92,7 @@ export default function ProductsTable() {
     }
 
     try {
-      const supabase = createBrowserClient()
+      const supabase = getBrowserClient()
 
       const { error } = await supabase.from("products").delete().eq("id", id)
 

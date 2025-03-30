@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { getBrowserClient } from "@/lib/supabase-client"
+import { getBrowserClient } from "@/lib/supabase-client-browser"
 
 // Interface matching the data we fetch - fetch id, name, and urlpage
 interface ProductInfo {
