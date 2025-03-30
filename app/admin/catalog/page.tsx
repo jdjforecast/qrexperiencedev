@@ -3,14 +3,14 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getAllProducts, createProduct, updateProduct, deleteProduct, type Product } from "@/lib/products"
-import { useToast } from "@/components/ui/use-toast"
+import { Button } from "../../../components/ui/button"
+import { Input } from "../../../components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
+import { getAllProducts, createProduct, updateProduct, deleteProduct, type Product } from "../../../lib/products"
+import { useToast } from "../../../components/ui/use-toast"
 import { Loader2 } from "lucide-react"
-import AdminLayout from "@/components/admin-layout"
+import AdminLayout from "../../../components/admin-layout"
 
 export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([])
