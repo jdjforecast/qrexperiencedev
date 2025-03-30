@@ -47,23 +47,6 @@ export default function RegisterPage() {
         return
       }
       
-      // Crear perfil en la tabla profiles
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email,
-            full_name: fullName,
-            company_name: companyName,
-            role: 'user'
-          })
-        
-        if (profileError) {
-          console.error("Error al crear perfil:", profileError)
-        }
-      }
-      
       // Redirigir al usuario
       router.push("/login?registered=true")
     } catch (err) {
