@@ -6,7 +6,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { CoinBalance } from "@/components/ui/coin-balance"
 import { ArrowLeft, ShoppingCart, Menu, X, QrCode, LogIn, UserCircle, LogOut, Home, Package } from "lucide-react"
-import { getUserProfile } from "@/lib/auth"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NestleLogo } from "@/components/ui/nestle-logo"
 import { PharmaSummitLogo } from "@/components/ui/pharma-summit-logo"
@@ -28,8 +27,6 @@ interface AppHeaderProps {
   cartCount?: number
   /** Función para manejar el clic en el carrito */
   onCartClick?: () => void
-  /** ID del usuario actual */
-  userId?: string
 }
 
 /**
@@ -221,122 +218,59 @@ export function AppHeader({
   onBackClick,
   cartCount = 0,
   onCartClick,
-  userId,
 }: AppHeaderProps) {
   const router = useRouter()
   const { openScanner } = useScanner()
-  const { user, signOut } = useAuth()
-  const [coins, setCoins] = useState<number | null>(null)
+  const { user, profile, signOut, isAuthenticated } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const { toast } = useToast()
 
-  // Cargar monedas del usuario
-  useEffect(() => {
-    let isMounted = true
-
-    if (userId) {
-      const fetchUserProfile = async () => {
-        try {
-          const profile = await getUserProfile(userId)
-          if (profile && isMounted) {
-            setCoins(profile.coins || 0)
-          }
-        } catch (error) {
-          console.error("Error al cargar el perfil de usuario:", error)
-        }
-      }
-
-      fetchUserProfile()
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [userId])
-
-  // Manejadores de eventos
-  const handleBackClick = () => {
-    if (onBackClick) {
-      onBackClick()
-    } else {
-      router.back()
-    }
-  }
-
-  const handleCartClick = () => {
-    if (onCartClick) {
-      onCartClick()
-    } else {
-      router.push("/cart")
-    }
-  }
-
   const handleLogout = async () => {
     setIsLoggingOut(true)
     try {
-      if (typeof signOut !== "function") {
-        throw new Error("La función signOut no está disponible")
-      }
-
-      const result = await signOut()
-
-      if (!result.success) {
-        throw new Error(result.message)
-      }
-
+      await signOut()
       setIsMenuOpen(false)
-
-      toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión correctamente.",
-      })
-
-      // Redirigir al inicio
-      router.push("/")
+      router.push("/login")
+      toast({ title: "Sesión cerrada", description: "Has cerrado sesión exitosamente." })
     } catch (error) {
-      console.error("Error al cerrar sesión:", error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo cerrar sesión. Por favor intenta de nuevo.",
-      })
+      console.error("Error logging out:", error)
+      toast({ title: "Error", description: "No se pudo cerrar sesión.", variant: "destructive" })
     } finally {
       setIsLoggingOut(false)
     }
   }
 
+  const handleCartClick = onCartClick ?? (() => router.push("/cart"))
+  const handleBackClick = onBackClick ?? (() => router.back())
+  const currentCoins = profile?.coins ?? null
+
   return (
-    <header className="p-4 flex items-center justify-between bg-[#0055B8]/30 backdrop-blur-md border-b border-white/10 sticky top-0 z-20">
-      <div className="flex items-center">
-        {showBackButton && <BackButton onClick={handleBackClick} />}
-        {title ? (
-          <h1 className="text-xl font-bold truncate max-w-[180px] sm:max-w-none">{title}</h1>
-        ) : (
-          <Link href="/" className="flex items-center">
-            <NestleLogo width={80} height={32} />
-          </Link>
-        )}
-      </div>
+    <header className="sticky top-0 z-30 w-full bg-gradient-to-r from-[#0033A0] to-[#0055B8]/90 backdrop-blur-md border-b border-white/10 shadow-sm">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="flex items-center">
+          {showBackButton && <BackButton onClick={handleBackClick} />}
+          {title ? (
+            <h1 className="text-lg font-semibold text-white truncate pr-2">{title}</h1>
+          ) : (
+            <Link href="/" className="flex items-center">
+              <PharmaSummitLogo width={150} height={50} />
+            </Link>
+          )}
+        </div>
 
-      <div className="flex items-center gap-3">
-        {userId && coins !== null && <CoinBalance coins={coins} size="sm" />}
-
-        <ScanButton onClick={openScanner} />
-
-        {onCartClick && <CartButton count={cartCount} onClick={handleCartClick} />}
-
-        <SideMenu
-          isOpen={isMenuOpen}
-          onOpenChange={setIsMenuOpen}
-          onLogout={handleLogout}
-          isLoggingOut={isLoggingOut}
-          isAuthenticated={!!user}
-          onScanClick={() => {
-            setIsMenuOpen(false)
-            openScanner()
-          }}
-        />
+        <div className="flex items-center gap-2">
+          {isAuthenticated && <CoinBalance coins={currentCoins} />}
+          <CartButton count={cartCount} onClick={handleCartClick} />
+          <SideMenu
+            isOpen={isMenuOpen}
+            onOpenChange={setIsMenuOpen}
+            onLogout={handleLogout}
+            isLoggingOut={isLoggingOut}
+            isAuthenticated={isAuthenticated}
+            onScanClick={openScanner}
+          />
+        </div>
       </div>
     </header>
   )

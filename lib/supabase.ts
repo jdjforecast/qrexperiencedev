@@ -116,9 +116,8 @@ export const dataAPI = {
   },
 
   // Usuarios - obtener perfil del usuario
-  async getUserProfile(userId: string) {
+  async getUserProfile(supabase: any, userId: string) {
     if (!userId) return null;
-    const supabase = getSupabase() // Usa cliente normal
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
