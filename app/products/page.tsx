@@ -16,6 +16,7 @@ interface Product {
   image_url: string | null
   stock: number
   code: string
+  short_code: string
 }
 
 export default function ProductsPage() {
@@ -67,7 +68,7 @@ export default function ProductsPage() {
             {products.map((product) => (
               <Link
                 key={product.id}
-                href={`/products/${product.id}`}
+                href={`/products/${product.short_code}`}
                 className="block overflow-hidden rounded-lg bg-white shadow-md transition-transform hover:scale-105"
               >
                 <div className="relative h-48 w-full">
