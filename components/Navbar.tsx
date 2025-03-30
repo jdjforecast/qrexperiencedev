@@ -38,94 +38,92 @@ export function Navbar() {
   const closeMenu = () => setIsMenuOpen(false);
 
   return (
-    // Replace .navbar with Tailwind classes
-    // Use CSS variables defined in globals.css for custom colors
-    <nav className="bg-[--azul-oscuro]/90 backdrop-blur-sm sticky top-0 z-50 shadow-md text-white">
+    // Use Tailwind color names directly now
+    <nav className="bg-azul-oscuro/90 backdrop-blur-sm sticky top-0 z-50 shadow-md text-white">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {/* Logo */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center" onClick={closeMenu}>
-            {/* Adjust logo size if needed */}
             <Image src="/images/nestledigitalpharmasummitvertical.svg" alt="Logo" width={120} height={48} priority />
           </Link>
         </div>
 
         {/* Mobile menu button */}
         <div className="md:hidden">
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[--verde]">
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-verde">
             <span className="sr-only">{isMenuOpen ? "Cerrar menú" : "Abrir menú"}</span>
             {isMenuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
         </div>
 
         {/* Desktop menu */}
-        <div className="hidden md:flex items-center space-x-4">
+        <div className="hidden md:flex items-center space-x-1">
           {!isLoading && (
              isAuthenticated ? (
               <>
-                <Link href="/dashboard" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/dashboard" className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Dashboard
                 </Link>
-                <Link href="/cart" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/cart" className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Carrito
                 </Link>
                 {isAdmin && (
-                  <Link href="/admin" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                  <Link href="/admin" className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                     Admin
                   </Link>
                 )}
-                <button onClick={handleSignOut} className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <button onClick={handleSignOut} className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Cerrar sesión
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/login" className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Iniciar sesión
                 </Link>
-                <Link href="/register" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/register" className="px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Registrarse
                 </Link>
               </>
             )
           )}
-          {isLoading && <div className="h-6 w-24 bg-gray-600 animate-pulse rounded-md"></div> /* Placeholder while loading */}
+          {isLoading && <div className="h-8 w-32 bg-white/20 animate-pulse rounded-md"></div>}
         </div>
       </div>
 
-      {/* Mobile menu panel - Add transition */}
-      <div className={`transition-all duration-300 ease-in-out md:hidden ${isMenuOpen ? 'max-h-screen opacity-100 visible' : 'max-h-0 opacity-0 invisible'} overflow-hidden absolute top-full left-0 right-0 bg-[--azul-oscuro]/95 shadow-lg z-40`}>
+      {/* Mobile menu panel */}
+      <div className={`transition-all duration-300 ease-in-out md:hidden ${isMenuOpen ? 'max-h-screen opacity-100 visible' : 'max-h-0 opacity-0 invisible'} overflow-hidden absolute top-full left-0 right-0 bg-azul-oscuro/95 shadow-lg z-40`}>
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
           {!isLoading && (
             isAuthenticated ? (
               <>
-                <Link href="/dashboard" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/dashboard" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Dashboard
                 </Link>
-                <Link href="/cart" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/cart" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Carrito
                 </Link>
                 {isAdmin && (
-                  <Link href="/admin" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                  <Link href="/admin" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                     Admin
                   </Link>
                 )}
-                <button onClick={handleSignOut} className="w-full text-left block px-3 py-2 rounded-md text-base font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <button onClick={handleSignOut} className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Cerrar sesión
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/login" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Iniciar sesión
                 </Link>
-                <Link href="/register" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium hover:bg-[--verde]/20 transition-colors duration-200">
+                <Link href="/register" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-verde/20 transition-colors duration-200">
                   Registrarse
                 </Link>
               </>
             )
           )}
-           {isLoading && <div className="h-8 w-full bg-gray-600 animate-pulse rounded-md mb-2"></div> /* Placeholder */}
+           {isLoading && <div className="h-10 w-full bg-white/20 animate-pulse rounded-md mb-1"></div>}
         </div>
       </div>
     </nav>
