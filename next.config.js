@@ -12,9 +12,6 @@ const nextConfig = {
     domains: ["localhost", "via.placeholder.com", "placehold.co", "picsum.photos"],
     unoptimized: true,
   },
-  experimental: {
-    serverActions: true,
-  },
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
