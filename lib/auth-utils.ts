@@ -5,7 +5,7 @@
 import { getBrowserClient } from "@/lib/supabase-client-browser"
 import type { User } from "@supabase/supabase-js"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { checkAdminSession } from './admin-auth'
+import { checkAdminSession } from '@/lib/admin-auth'
 import { redirect } from 'next/navigation'
 
 /**
