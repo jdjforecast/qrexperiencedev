@@ -9,8 +9,6 @@ import { ArrowLeft, ShoppingCart, Menu, X, QrCode, LogIn, UserCircle, LogOut, Ho
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { PharmaSummitLogo } from "@/components/ui/pharma-summit-logo"
 import { useScanner } from "@/contexts/scanner-context"
-import { useAuth } from "@/hooks/auth"
-import { useToast } from "@/components/ui/use-toast"
 
 /**
  * Props para el componente AppHeader
@@ -82,23 +80,18 @@ function ScanButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * Componente para el menú lateral
+ * Componente para el menú lateral simplificado
  */
 function SideMenu({
   isOpen,
   onOpenChange,
-  onLogout,
-  isLoggingOut,
-  isAuthenticated,
   onScanClick,
 }: {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  onLogout: () => void
-  isLoggingOut: boolean
-  isAuthenticated: boolean
   onScanClick: () => void
 }) {
+  // Items siempre visibles (públicos)
   const menuItems = [
     { href: "/", label: "Inicio", icon: <Home className="h-5 w-5 mr-2" /> },
     { label: "Escanear QR", icon: <QrCode className="h-5 w-5 mr-2" />, onClick: onScanClick },
@@ -106,11 +99,9 @@ function SideMenu({
     { href: "/cart", label: "Carrito", icon: <ShoppingCart className="h-5 w-5 mr-2" /> },
   ]
 
-  const authenticatedItems = [{ href: "/profile", label: "Mi Perfil", icon: <UserCircle className="h-5 w-5 mr-2" /> }]
-
-  const unauthenticatedItems = [
-    { href: "/login", label: "Iniciar Sesión", icon: <LogIn className="h-5 w-5 mr-2" /> },
-    { href: "/register", label: "Registrarse", icon: null },
+  // Nuevo item para "Empezar Pedido"
+  const startOrderItems = [
+    { href: "/identificar", label: "Empezar Pedido", icon: <LogIn className="h-5 w-5 mr-2" /> }, // Reutilizamos icono de LogIn
   ]
 
   return (
@@ -130,6 +121,7 @@ function SideMenu({
           </div>
 
           <nav className="flex flex-col gap-2 animate-fade-in" aria-label="Navegación principal">
+            {/* Items públicos principales */}
             {menuItems.map((item, index) =>
               item.href ? (
                 <Link
@@ -156,56 +148,19 @@ function SideMenu({
               ),
             )}
 
-            {isAuthenticated ? (
-              <>
-                {authenticatedItems.map((item, index) => (
-                  <Link
-                    key={`auth-${index}`}
-                    href={item.href}
-                    className="p-3 rounded-lg hover:bg-white/10 transition-colors flex items-center"
-                    onClick={() => onOpenChange(false)}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                ))}
-
-                <button
-                  onClick={onLogout}
-                  disabled={isLoggingOut}
-                  className="mt-6 p-3 rounded-lg bg-error/20 hover:bg-error/30 text-left transition-colors flex items-center text-white"
-                >
-                  {isLoggingOut ? (
-                    <>
-                      <span className="mr-2 h-5 w-5 inline-block">
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                      </span>
-                      Cerrando sesión...
-                    </>
-                  ) : (
-                    <>
-                      <LogOut className="h-5 w-5 mr-2" />
-                      Cerrar Sesión
-                    </>
-                  )}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="border-t border-white/10 my-4"></div>
-                {unauthenticatedItems.map((item, index) => (
-                  <Link
-                    key={`unauth-${index}`}
-                    href={item.href}
-                    className="p-3 rounded-lg hover:bg-white/10 transition-colors flex items-center"
-                    onClick={() => onOpenChange(false)}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                ))}
-              </>
-            )}
+            {/* Separador y botón "Empezar Pedido" */}
+            <div className="border-t border-white/10 my-4"></div>
+            {startOrderItems.map((item, index) => (
+              <Link
+                key={`start-${index}`}
+                href={item.href}
+                className="p-3 rounded-lg hover:bg-white/10 transition-colors flex items-center"
+                onClick={() => onOpenChange(false)}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            ))}
           </nav>
 
           <div className="mt-auto text-center pt-4 border-t border-white/10 text-xs opacity-70">
@@ -219,18 +174,15 @@ function SideMenu({
 }
 
 /**
- * Componente principal del encabezado de la aplicación
+ * Componente principal del encabezado de la aplicación simplificado
  */
 export function AppHeader({ title, showBackButton = false, onBackClick, cartCount = 0, onCartClick }: AppHeaderProps) {
-  const router = useRouter()
+  const router = useRouter() // Mantenemos router si es necesario para onBackClick por defecto
   const { openScanner } = useScanner()
-  const { user, profile, signOut, isAuthenticated } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const { toast } = useToast()
 
-  // Manejar evento de scroll para cambiar el estilo del header
+  // Manejar evento de scroll
   const handleScroll = useCallback(() => {
     const scrollPosition = window.scrollY
     setIsScrolled(scrollPosition > 10)
@@ -241,63 +193,37 @@ export function AppHeader({ title, showBackButton = false, onBackClick, cartCoun
     return () => window.removeEventListener("scroll", handleScroll)
   }, [handleScroll])
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true)
-    try {
-      await signOut()
-      setIsMenuOpen(false)
-      router.push("/login")
-      toast({ title: "Sesión cerrada", description: "Has cerrado sesión exitosamente." })
-    } catch (error) {
-      console.error("Error logging out:", error)
-      toast({ title: "Error", description: "No se pudo cerrar sesión.", variant: "destructive" })
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
+  // Función onBackClick por defecto si no se proporciona
+  const defaultOnBackClick = () => router.back()
 
-  const handleCartClick = onCartClick ?? (() => router.push("/cart"))
-  const handleBackClick = onBackClick ?? (() => router.back())
-  const currentCoins = profile?.coins ?? null
+  // Función onCartClick por defecto (ejemplo, podría navegar a /cart)
+  const defaultOnCartClick = () => router.push('/cart')
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-30 w-full transition-all duration-300 backdrop-blur-sm ${
-        isScrolled ? "bg-primary/95 shadow-md py-2" : "bg-primary/85 py-3"
-      }`}
+      className={`sticky top-0 z-50 transition-colors duration-300 ${isScrolled ? "bg-primary/95 backdrop-blur-md" : "bg-primary"}`}
     >
-      <div className="container-wide flex items-center justify-between">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between text-white">
         <div className="flex items-center">
-          {showBackButton && <BackButton onClick={handleBackClick} />}
-          <Link href="/" className="flex items-center">
-            <PharmaSummitLogo width={140} height={40} />
-          </Link>
+          {showBackButton && <BackButton onClick={onBackClick || defaultOnBackClick} />}
+          {title && <h1 className="text-lg font-semibold truncate ml-2">{title}</h1>}
+          {!showBackButton && !title && (
+            <Link href="/" aria-label="Ir al inicio">
+              <PharmaSummitLogo height={40} />
+            </Link>
+          )}
         </div>
 
-        <div className="flex items-center space-x-1">
-          {isAuthenticated && currentCoins !== null && (
-            <div className="mr-1">
-              <CoinBalance coins={currentCoins} />
-            </div>
-          )}
+        <div className="flex items-center space-x-2">
           <ScanButton onClick={openScanner} />
-          <CartButton count={cartCount} onClick={handleCartClick} />
+          <CartButton count={cartCount} onClick={onCartClick || defaultOnCartClick} />
           <SideMenu
             isOpen={isMenuOpen}
             onOpenChange={setIsMenuOpen}
-            onLogout={handleLogout}
-            isLoggingOut={isLoggingOut}
-            isAuthenticated={isAuthenticated}
             onScanClick={openScanner}
           />
         </div>
       </div>
-
-      {title && (
-        <div className="w-full text-center mt-1 pb-1">
-          <h1 className="text-lg font-semibold animate-fade-in">{title}</h1>
-        </div>
-      )}
     </header>
   )
 }
