@@ -2,12 +2,11 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useCart } from "@/components/cart/CartProvider"
 import { getBrowserClient } from "@/lib/supabase-client-browser"
-import { getCurrentUser } from "@/lib/auth-utils"
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart()
@@ -20,6 +19,12 @@ export default function CheckoutPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const savedName = localStorage.getItem('buyerName') || '';
+    const savedCompanyName = localStorage.getItem('buyerCompanyName') || '';
+    setFormData(prev => ({ ...prev, fullName: savedName, companyName: savedCompanyName }));
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -41,7 +46,12 @@ export default function CheckoutPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+    if (name === 'fullName') localStorage.setItem('buyerName', value);
+    if (name === 'companyName') localStorage.setItem('buyerCompanyName', value);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,32 +60,40 @@ export default function CheckoutPage() {
     setError(null)
 
     try {
-      // Get current user
-      const user = await getCurrentUser()
-
-      if (!user) {
-        throw new Error("Debes iniciar sesión para completar la compra")
+      if (items.length === 0) {
+        throw new Error("El carrito está vacío.");
       }
 
-      // Create order items from cart
+      const customerInfo = {
+        fullName: formData.fullName,
+        companyName: formData.companyName,
+        email: formData.email,
+        phone: formData.phone,
+      };
+
       const orderItems = items.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
-      }))
+      }));
 
-      // Create order in database
-      const order = await getBrowserClient().createOrder(user.id, orderItems)
+      console.log("Simulando llamada a API para crear orden con:", { customerInfo, orderItems, totalPrice });
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const simulatedOrderId = `ORDER-${Date.now()}`;
 
-      // Clear cart after successful order
+      const order = { id: simulatedOrderId };
+
       clearCart()
 
-      // Redirect to invoice page
-      router.push(`/invoice/${order.id}`)
+      localStorage.removeItem('buyerName');
+      localStorage.removeItem('buyerCompanyName');
+
+      router.push(`/invoice/${order.id}`);
+
     } catch (err: any) {
-      console.error("Checkout error:", err)
-      setError(err.message || "Error al procesar la orden. Por favor intenta nuevamente.")
+      console.error("Checkout error:", err);
+      setError(err.message || "Error al procesar la orden. Por favor intenta nuevamente.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -161,7 +179,7 @@ export default function CheckoutPage() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || items.length === 0}
                   className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
                   {isSubmitting ? "Procesando..." : "Completar Compra"}
