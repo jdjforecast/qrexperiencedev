@@ -1,7 +1,7 @@
 import { getServerClient } from "@/lib/supabase-client-server"
 import { getCurrentUser } from "@/lib/auth-utils"
 import { redirect } from "next/navigation"
-import OrdersTable from "./orders-table"
+import OrdersList from "./orders-list"
 
 export default async function AdminOrdersPage() {
   const supabase = getServerClient()
@@ -40,7 +40,7 @@ export default async function AdminOrdersPage() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-2xl font-bold mb-6">Administración de Órdenes</h1>
-      <OrdersTable initialOrders={orders || []} />
+      <OrdersList initialOrders={orders || []} />
     </div>
   )
 }
