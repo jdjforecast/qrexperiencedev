@@ -5,6 +5,8 @@
 import { getBrowserClient } from "@/lib/supabase-client-browser"
 import type { User } from "@supabase/supabase-js"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { checkAdminSession } from './admin-auth'
+import { redirect } from 'next/navigation'
 
 /**
  * Verifica si un usuario tiene rol de administrador
@@ -128,5 +130,23 @@ export async function getCurrentUser(supabase: SupabaseClient): Promise<User | n
     console.error("Error getting current user:", error)
     return null
   }
+}
+
+export async function requireAdmin() {
+  const session = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('admin-session'));
+    
+  if (!session || !checkAdminSession(session)) {
+    redirect('/login');
+  }
+}
+
+// Para componentes que necesiten verificar el rol de admin
+export function useIsAdmin() {
+  const session = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('admin-session'));
+  return !!session;
 }
 

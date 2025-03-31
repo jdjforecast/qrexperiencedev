@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { isPublicRoute, isAdminRoute } from "@/lib/auth"
+import { checkAdminSession } from '@/lib/admin-auth'
 
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl
