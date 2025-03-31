@@ -21,7 +21,7 @@ interface ProfileData {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const supabase = await getServerClient()
+    const supabase = getServerClient()
     const { data, error } = await supabase.auth.getSession()
 
     if (error) {
@@ -57,7 +57,7 @@ export async function getUserProfile(userId: string): Promise<ProfileData | null
       return null
     }
 
-    const supabase = await getServerClient({ admin: true })
+    const supabase = getServerClient({ admin: true })
 
     const { data: existingProfile, error: checkError } = await supabase
       .from("profiles")
@@ -131,14 +131,6 @@ export async function isUserAdmin(userId: string | undefined | null): Promise<bo
 }
 
 /**
- * Crea un cliente Supabase para el servidor
- * Helper para componentes de servidor y API routes
- */
-export async function createServerClient(options?: { admin?: boolean }) {
-  return getServerClient(options)
-}
-
-/**
  * Registra un nuevo usuario (Server-Side)
  * @param email Email del usuario
  * @param password Contraseña del usuario
@@ -151,6 +143,7 @@ interface RegisterResult {
   user?: User | null
   message: string
 }
+
 export async function registerUser(
   email: string,
   password: string,
@@ -158,7 +151,7 @@ export async function registerUser(
   companyName = "",
 ): Promise<RegisterResult> {
   try {
-    const supabase = await getServerClient()
+    const supabase = getServerClient()
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
 
