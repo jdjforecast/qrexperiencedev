@@ -55,39 +55,62 @@ export default function CheckoutPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setError(null)
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
 
     try {
       if (items.length === 0) {
         throw new Error("El carrito está vacío.");
       }
 
+      // Crear objeto con información del cliente desde el estado del formulario
       const customerInfo = {
         fullName: formData.fullName,
         companyName: formData.companyName,
         email: formData.email,
-        phone: formData.phone,
+        phone: formData.phone || null, // Enviar null si está vacío
       };
 
-      const orderItems = items.map((item) => ({
+      // Crear order items desde el carrito (asegurándose de incluir el precio)
+      const orderItemsPayload = items.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
+        price: item.price, // Asegúrate de que esto esté disponible en useCart()
       }));
 
-      console.log("Simulando llamada a API para crear orden con:", { customerInfo, orderItems, totalPrice });
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const simulatedOrderId = `ORDER-${Date.now()}`;
+      // --- Llamada real a la API --- 
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          customerInfo, 
+          items: orderItemsPayload, 
+          totalPrice // Enviar el precio total calculado en el frontend
+        }),
+      });
 
-      const order = { id: simulatedOrderId };
+      const result = await response.json(); // Leer el cuerpo de la respuesta
 
+      if (!response.ok || !result.success) {
+        // Si la API devuelve un error (4xx, 5xx) o success: false
+        throw new Error(result.message || 'Error al crear la orden en el servidor.');
+      }
+      
+      // --- Éxito --- 
+      const orderId = result.orderId; // Obtener el ID de la orden creada
+
+      // Limpiar carrito después de orden exitosa
       clearCart()
 
+      // Opcional: Limpiar Local Storage del comprador
       localStorage.removeItem('buyerName');
       localStorage.removeItem('buyerCompanyName');
 
-      router.push(`/invoice/${order.id}`);
+      // Redirigir a página de confirmación/factura
+      router.push(`/invoice/${orderId}`); // Usar el ID real devuelto por la API
 
     } catch (err: any) {
       console.error("Checkout error:", err);
