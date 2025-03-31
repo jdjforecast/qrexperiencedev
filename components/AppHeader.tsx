@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { CoinBalance } from "@/components/ui/coin-balance"
-import { ArrowLeft, ShoppingCart, Menu, X, QrCode, LogIn, UserCircle, LogOut, Home, Package } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Menu, X, QrCode, LogIn, Home, Package } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { PharmaSummitLogo } from "@/components/ui/pharma-summit-logo"
 import { useScanner } from "@/contexts/scanner-context"
@@ -99,9 +98,9 @@ function SideMenu({
     { href: "/cart", label: "Carrito", icon: <ShoppingCart className="h-5 w-5 mr-2" /> },
   ]
 
-  // Nuevo item para "Empezar Pedido"
+  // Botón "Empezar Pedido" ahora apunta a /products
   const startOrderItems = [
-    { href: "/identificar", label: "Empezar Pedido", icon: <LogIn className="h-5 w-5 mr-2" /> }, // Reutilizamos icono de LogIn
+    { href: "/products", label: "Empezar Pedido", icon: <LogIn className="h-5 w-5 mr-2" /> }, // Cambiado de /identificar
   ]
 
   return (
@@ -227,4 +226,3 @@ export function AppHeader({ title, showBackButton = false, onBackClick, cartCoun
     </header>
   )
 }
-
