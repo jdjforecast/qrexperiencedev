@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from 'react';
-import { isAdmin } from '@/lib/admin-auth';
 import { useRouter } from 'next/navigation';
+import { ADMIN_CREDENTIALS } from '@/lib/auth/server-auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function LoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    if (isAdmin(email, password)) {
+    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
       // Crear sesión simple
       document.cookie = `admin-session=${email}; path=/`;
       router.push('/admin');
